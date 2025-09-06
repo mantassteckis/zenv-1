@@ -1,6 +1,6 @@
 // lib/firebase/firestore.ts
 
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, query, orderBy, limit as limitToLast, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, query, where, orderBy, limit as limitToLast, getDocs } from 'firebase/firestore';
 import { db } from './client';
 import { UserProfile, TestResult, COLLECTIONS } from '@/lib/types/database';
 
@@ -304,13 +304,61 @@ const updateUserStatsAfterTest = async (uid: string) => {
  */
 export const calculateUserStats = async (uid: string) => {
   try {
-    const profile = await getUserProfile(uid);
-    return profile?.stats || {
-      rank: 'E',
-      testsCompleted: 0,
-      avgWpm: 0,
-      avgAcc: 0,
+    console.log('📊 calculateUserStats called for UID:', uid);
+    
+    // Query test results directly from the testResults collection
+    const testResultsRef = collection(db, 'testResults');
+    const q = query(
+      testResultsRef,
+      where('userId', '==', uid),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const testResults = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as any[];
+    
+    console.log('📊 Found test results:', testResults.length);
+    
+    if (testResults.length === 0) {
+      return {
+        rank: 'E',
+        testsCompleted: 0,
+        avgWpm: 0,
+        avgAcc: 0,
+        bestWpm: 0,
+        bestAccuracy: 0,
+      };
+    }
+    
+    // Calculate statistics
+    const testsCompleted = testResults.length;
+    const avgWpm = testResults.reduce((sum, test) => sum + (test.wpm || 0), 0) / testsCompleted;
+    const avgAcc = testResults.reduce((sum, test) => sum + (test.accuracy || 0), 0) / testsCompleted;
+    const bestWpm = Math.max(...testResults.map(test => test.wpm || 0));
+    const bestAccuracy = Math.max(...testResults.map(test => test.accuracy || 0));
+    
+    // Calculate rank based on average WPM
+    let rank = 'E';
+    if (avgWpm >= 80) rank = 'S';
+    else if (avgWpm >= 60) rank = 'A';
+    else if (avgWpm >= 40) rank = 'B';
+    else if (avgWpm >= 20) rank = 'C';
+    else if (avgWpm >= 10) rank = 'D';
+    
+    const stats = {
+      rank,
+      testsCompleted,
+      avgWpm: Math.round(avgWpm),
+      avgAcc: Math.round(avgAcc),
+      bestWpm: Math.round(bestWpm),
+      bestAccuracy: Math.round(bestAccuracy),
     };
+    
+    console.log('📊 Calculated stats:', stats);
+    return stats;
   } catch (error) {
     console.error('Error calculating user stats:', error);
     return null;

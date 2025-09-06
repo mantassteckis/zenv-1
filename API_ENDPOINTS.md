@@ -72,6 +72,64 @@
 - **Usage**: Called by dashboard to display user performance metrics
 - **Note**: Currently returns default values, will be enhanced when test results storage is implemented
 
+## API Routes
+
+### Test Result Submission
+
+#### `POST /api/submit-test-result` (Next.js API Route)
+- **Purpose**: Secure endpoint for submitting test results with validation
+- **Authentication**: Required - Bearer token in Authorization header
+- **Request Body**:
+  ```typescript
+  {
+    wpm: number;           // 0-400
+    accuracy: number;      // 0-100
+    errors: number;        // >= 0
+    timeTaken: number;     // > 0 (seconds)
+    textLength: number;    // > 0
+    userInput: string;     // Required
+    testType: string;      // Required (e.g., 'practice', 'ai-generated')
+    difficulty: string;    // Required (e.g., 'Easy', 'Medium', 'Hard')
+    testId: string;        // Required - links to test content
+  }
+  ```
+- **Response**: `{ success: true, message: string }`
+- **Validation**: Server-side validation of all data fields
+- **Actions**:
+  1. Validates JWT token from Authorization header
+  2. Validates all test data fields
+  3. Saves test result to `testResults` collection in Firestore
+- **Error Handling**: Returns appropriate HTTP status codes and error messages
+
+## Cloud Functions
+
+### Test Result Submission (Alternative)
+
+#### `submitTestResult` (Cloud Function)
+- **Purpose**: Secure endpoint for submitting test results with validation and stats updates
+- **Authentication**: Required - throws unauthenticated error if no user
+- **Request Body**:
+  ```typescript
+  {
+    wpm: number;           // 0-400
+    accuracy: number;      // 0-100
+    errors: number;        // >= 0
+    timeTaken: number;     // > 0 (seconds)
+    textLength: number;    // > 0
+    userInput: string;     // Required
+    testType: string;      // Required (e.g., 'practice', 'ai-generated')
+    difficulty: string;    // Required (e.g., 'Easy', 'Medium', 'Hard')
+    testId?: string;       // Optional - links to test content
+  }
+  ```
+- **Response**: `{ success: true, message: string }`
+- **Validation**: Server-side validation of all data fields
+- **Transaction**: Uses Firestore transaction to ensure data consistency
+- **Actions**:
+  1. Creates new document in `testResults` collection
+  2. Updates user profile stats (rank, testsCompleted, avgWpm, avgAcc)
+- **Error Handling**: Throws HttpsError for validation failures or server errors
+
 ## UI/UX Enhancements
 
 ### Dashboard Page
@@ -139,3 +197,26 @@
 - **Missing Field Detection**: Automatically detects and fixes missing profile fields (username, settings, preferences)
 - **Backward Compatibility**: Ensures all existing users have complete profile data
 - **Real-time Updates**: Profile changes are immediately reflected across all components
+
+## Test Result Data Flow (Fixed)
+
+### Complete Data Persistence System
+- **Test Submission**: Fixed API route `/api/submit-test-result` with proper error handling
+- **Data Storage**: Test results saved to `testResults` collection in Firestore
+- **Stats Calculation**: Real-time calculation of user statistics from test results
+- **Dashboard Display**: Live display of user stats and recent test results
+- **History View**: Paginated display of all user test results
+
+### Key Fixes Applied
+1. **API Route Fix**: Fixed incorrect Firestore syntax in `/api/submit-test-result/route.ts`
+2. **Stats Calculation**: Updated `calculateUserStats` to query test results directly
+3. **Data Structure**: Ensured consistent data structure across all components
+4. **Error Handling**: Added proper validation and error handling for all data operations
+
+### Data Flow
+1. **Test Completion** → Test page calculates WPM, accuracy, errors
+2. **Data Submission** → POST to `/api/submit-test-result` with JWT token
+3. **Server Validation** → API route validates all data fields
+4. **Firestore Storage** → Test result saved to `testResults` collection
+5. **Dashboard Update** → Dashboard queries test results and calculates stats
+6. **History Display** → History page shows paginated test results

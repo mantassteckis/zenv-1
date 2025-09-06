@@ -8,17 +8,29 @@ import { useAuth } from "@/context/AuthProvider"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { calculateUserStats } from "@/lib/firebase/firestore"
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase/client"
 
 export default function DashboardPage() {
   const { user, profile, isLoading } = useAuth();
   const router = useRouter();
   const [userStats, setUserStats] = useState<{
+    rank: string;
     avgWpm: number;
     avgAcc: number;
     testsCompleted: number;
     bestWpm: number;
     bestAccuracy: number;
   } | null>(null);
+  
+  const [recentTests, setRecentTests] = useState<Array<{
+    id: string;
+    wpm: number;
+    accuracy: number;
+    testType: string;
+    difficulty: string;
+    createdAt: string;
+  }>>([]);
 
   useEffect(() => {
     console.log("📊 Dashboard - useEffect triggered");
@@ -30,12 +42,45 @@ export default function DashboardPage() {
     if (user && profile) {
       console.log("✅ Dashboard - Both user and profile available, calculating stats...");
       calculateUserStats(user.uid).then(setUserStats);
+      
+      // Fetch recent test results
+      fetchRecentTests();
     } else if (user && !profile) {
       console.log("⚠️ Dashboard - User exists but no profile yet");
     } else if (!user) {
       console.log("🚫 Dashboard - No user authenticated");
     }
   }, [user, profile, isLoading]);
+
+  const fetchRecentTests = async () => {
+    if (!user) return;
+    
+    try {
+      console.log("🔍 Dashboard - Fetching recent test results...");
+      const testResultsRef = collection(db, "testResults");
+      const q = query(
+        testResultsRef,
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+        limit(5)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const recentTestsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        wpm: doc.data().wpm,
+        accuracy: doc.data().accuracy,
+        testType: doc.data().testType,
+        difficulty: doc.data().difficulty,
+        createdAt: doc.data().createdAt,
+      }));
+      
+      console.log("✅ Dashboard - Recent tests fetched:", recentTestsData.length);
+      setRecentTests(recentTestsData);
+    } catch (error) {
+      console.error("❌ Dashboard - Error fetching recent tests:", error);
+    }
+  };
 
   // Show loading state OR if user exists but no profile yet
   if (isLoading || (user && !profile)) {
@@ -162,7 +207,7 @@ export default function DashboardPage() {
               <Trophy className="h-6 w-6 text-white" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-[#00BFFF]">{profile?.stats.rank || 'E'}</div>
+              <div className="text-2xl font-bold text-[#00BFFF]">{userStats?.rank || 'E'}</div>
               <div className="text-foreground text-sm">Current Rank</div>
             </div>
           </GlassCard>
@@ -194,18 +239,46 @@ export default function DashboardPage() {
               <Clock className="h-5 w-5 text-[#00BFFF]" />
               <h2 className="text-xl font-semibold text-foreground">Recent Activity</h2>
             </div>
-            <div className="h-64 flex items-center justify-center">
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 bg-muted/40 rounded-lg flex items-center justify-center mx-auto">
-                  <Clock className="h-6 w-6 text-muted-foreground" />
+            <div className="h-64">
+              {recentTests.length > 0 ? (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {recentTests.map((test) => (
+                    <div key={test.id} className="flex items-center justify-between p-3 bg-accent/20 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-[#00BFFF] rounded-full flex items-center justify-center">
+                          <Zap className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {test.testType === 'practice' ? 'Practice Test' : test.testType}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {test.difficulty} • {new Date(test.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-[#00BFFF]">{test.wpm} WPM</p>
+                        <p className="text-xs text-muted-foreground">{test.accuracy}% accuracy</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">No recent activity</p>
-                  <p className="text-muted-foreground text-xs">
-                    Your recent test results will appear here
-                  </p>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="w-12 h-12 bg-muted/40 rounded-lg flex items-center justify-center mx-auto">
+                      <Clock className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">No recent activity</p>
+                      <p className="text-muted-foreground text-xs">
+                        Your recent test results will appear here
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </GlassCard>
         </div>

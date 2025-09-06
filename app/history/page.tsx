@@ -6,29 +6,101 @@ import { Button } from "@/components/ui/button"
 import { History, Calendar, Target, Zap, Clock, Play } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider"
 import { useRouter } from "next/navigation"
-import { getUserTestHistory } from "@/lib/firebase/firestore"
 import { TestResult } from "@/lib/types/database"
 import { useState, useEffect } from "react"
+import { collection, query, where, orderBy, limit, startAfter, getDocs, DocumentSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase/client"
 
 export default function HistoryPage() {
   const { user, profile, isLoading } = useAuth();
   const router = useRouter();
   const [testHistory, setTestHistory] = useState<TestResult[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // Fetch test history when user is available
+  // Fetch initial test history when user is available
   useEffect(() => {
     if (user) {
-      setHistoryLoading(true);
-      getUserTestHistory(user.uid)
-        .then(setTestHistory)
-        .catch(error => {
-          console.error('Error fetching test history:', error);
-          setTestHistory([]);
-        })
-        .finally(() => setHistoryLoading(false));
+      fetchTestHistory();
     }
   }, [user]);
+
+  const fetchTestHistory = async (loadMore = false) => {
+    if (!user) return;
+    
+    try {
+      if (loadMore) {
+        setLoadingMore(true);
+      } else {
+        setHistoryLoading(true);
+        setTestHistory([]);
+        setLastVisible(null);
+        setHasMore(true);
+      }
+
+      console.log("🔍 History - Fetching test results...");
+      const testResultsRef = collection(db, "testResults");
+      let q = query(
+        testResultsRef,
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+        limit(20)
+      );
+
+      // Add pagination if loading more
+      if (loadMore && lastVisible) {
+        q = query(
+          testResultsRef,
+          where("userId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          startAfter(lastVisible),
+          limit(20)
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      const newTests = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        textLength: doc.data().textLength,
+        userInput: doc.data().userInput,
+        wpm: doc.data().wpm,
+        accuracy: doc.data().accuracy,
+        errors: doc.data().errors,
+        timeTaken: doc.data().timeTaken,
+        testType: doc.data().testType,
+        difficulty: doc.data().difficulty,
+        completedAt: doc.data().createdAt,
+      }));
+
+      if (loadMore) {
+        setTestHistory(prev => [...prev, ...newTests]);
+      } else {
+        setTestHistory(newTests);
+      }
+
+      // Update pagination state
+      if (querySnapshot.docs.length < 20) {
+        setHasMore(false);
+      } else {
+        setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      }
+
+      console.log("✅ History - Test results fetched:", newTests.length);
+    } catch (error) {
+      console.error("❌ History - Error fetching test results:", error);
+    } finally {
+      setHistoryLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreTests = () => {
+    if (hasMore && !loadingMore) {
+      fetchTestHistory(true);
+    }
+  };
 
   // Show loading state
   if (isLoading) {
@@ -175,7 +247,7 @@ export default function HistoryPage() {
                       <span className="font-semibold text-green-500">{test.accuracy}%</span>
                     </td>
                     <td className="py-4 px-2 text-muted-foreground capitalize">
-                      {test.testType || 'Practice'}
+                      {test.testType === 'practice' ? 'Practice' : test.testType}
                     </td>
                     <td className="py-4 px-2 text-muted-foreground">
                       {test.difficulty || 'Medium'}
@@ -188,6 +260,27 @@ export default function HistoryPage() {
               </tbody>
             </table>
           </div>
+          
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center py-6 border-t border-border">
+              <Button
+                onClick={loadMoreTests}
+                disabled={loadingMore}
+                variant="outline"
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground mr-2"></div>
+                    Loading...
+                  </>
+                ) : (
+                  'Load More Tests'
+                )}
+              </Button>
+            </div>
+          )}
         </GlassCard>
       </main>
     </div>

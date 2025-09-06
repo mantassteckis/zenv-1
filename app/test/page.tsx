@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Clock, Target, Zap, RotateCcw, BarChart3, Palette, Type } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider"
-import { saveTestResult } from "@/lib/firebase/firestore"
+// Removed Cloud Function imports - now using Next.js API route
 
 interface TypingCustomization {
   theme: string
@@ -41,6 +41,7 @@ export default function TestPage() {
   const [activeTab, setActiveTab] = useState("practice");
   const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
   const [topic, setTopic] = useState("");
+  const [currentTestId, setCurrentTestId] = useState<string | null>(null);
   const [typingCustomization, setTypingCustomization] = useState<TypingCustomization>({
     theme: "default",
     font: "fira-code",
@@ -95,34 +96,93 @@ export default function TestPage() {
       intervalRef.current = null;
     }
     
-    // Save test result to Firestore if user is authenticated
+    // Save test result using Cloud Function if user is authenticated
     if (user) {
       try {
-        const timeTaken = selectedTime - timeLeft;
-        const wpm = Math.round((userInput.length / 5) / (timeTaken / 60));
-        const accuracy = Math.round(((userInput.length - errors) / userInput.length) * 100);
+        const timeTaken = Math.max(1, selectedTime - timeLeft); // Ensure minimum 1 second
         
-        const testResult = {
-          textLength: textToType.length,
-          userInput: userInput,
+        // Calculate WPM safely - handle division by zero
+        let wpm = 0;
+        if (timeTaken > 0 && userInput.length > 0) {
+          wpm = Math.round((userInput.length / 5) / (timeTaken / 60));
+        }
+        
+        // Calculate accuracy safely - handle division by zero
+        let accuracy = 0;
+        if (userInput.length > 0) {
+          accuracy = Math.round(((userInput.length - errors) / userInput.length) * 100);
+        }
+        
+        // Ensure values are valid numbers (not NaN or Infinity)
+        wpm = isNaN(wpm) || !isFinite(wpm) ? 0 : Math.max(0, wpm);
+        accuracy = isNaN(accuracy) || !isFinite(accuracy) ? 0 : Math.max(0, Math.min(100, accuracy));
+        
+        const testResultData = {
           wpm: wpm,
           accuracy: accuracy,
-          errors: errors,
-          timeTaken: timeTaken,
+          errors: Math.max(0, errors), // Ensure errors is not negative
+          timeTaken: Math.max(0, timeTaken), // Ensure timeTaken is not negative
+          textLength: Math.max(0, textToType.length), // Ensure textLength is not negative
+          userInput: userInput || '', // Ensure userInput is a string
           testType: 'practice', // Could be 'practice', 'ai-generated', etc.
-          difficulty: selectedDifficulty,
+          difficulty: selectedDifficulty || 'medium', // Ensure difficulty has a default
+          testId: currentTestId || `practice_${Date.now()}`, // Ensure testId exists
         };
         
-        console.log('Saving test result:', testResult);
-        await saveTestResult(user.uid, testResult);
-        console.log('Test result saved successfully');
+        console.log('Submitting test result via Cloud Function:', testResultData);
+        console.log('Validation check - all values are valid:', {
+          wpm: typeof wpm === 'number' && !isNaN(wpm),
+          accuracy: typeof accuracy === 'number' && !isNaN(accuracy),
+          errors: typeof errors === 'number' && !isNaN(errors),
+          timeTaken: typeof timeTaken === 'number' && !isNaN(timeTaken),
+          textLength: typeof textToType.length === 'number' && !isNaN(textToType.length)
+        });
+        console.log('Raw calculation values:', {
+          selectedTime,
+          timeLeft,
+          timeTaken,
+          userInputLength: userInput.length,
+          errors,
+          textToTypeLength: textToType.length
+        });
+        
+        // Call the Next.js API route instead of Cloud Function
+        const response = await fetch('/api/submit-test-result', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          },
+          body: JSON.stringify(testResultData)
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to save test result');
+        }
+        
+        console.log('Test result submitted successfully:', result);
+        
+        // Show success feedback to user
+        // TODO: Add toast notification for better UX
+        
       } catch (error) {
-        console.error('Error saving test result:', error);
+        console.error('Error submitting test result:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details
+        });
+        
+        // Show error feedback to user
+        // TODO: Add error toast notification
+        alert(`Failed to save test result: ${error.message || 'Unknown error'}. Please try again.`);
       }
     } else {
       console.log('User not authenticated, not saving test result');
     }
-  }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty]);
+  }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId]);
 
   const startTest = useCallback(() => {
     setUserInput("");
@@ -131,6 +191,13 @@ export default function TestPage() {
     setTimeLeft(selectedTime);
     setStatus('waiting');
     setView('active');
+    
+    // Generate a test ID for practice tests
+    // For now, we'll use a simple timestamp-based ID
+    // In the future, this could be a proper PreMadeTest ID
+    const testId = `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setCurrentTestId(testId);
+    
     setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
