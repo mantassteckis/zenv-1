@@ -66,14 +66,17 @@ export default function DashboardPage() {
       );
       
       const querySnapshot = await getDocs(q);
-      const recentTestsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        wpm: doc.data().wpm,
-        accuracy: doc.data().accuracy,
-        testType: doc.data().testType,
-        difficulty: doc.data().difficulty,
-        createdAt: doc.data().createdAt,
-      }));
+      const recentTestsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          wpm: data.wpm,
+          accuracy: data.accuracy,
+          testType: data.testType,
+          difficulty: data.difficulty,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+        };
+      });
       
       console.log("✅ Dashboard - Recent tests fetched:", recentTestsData.length);
       setRecentTests(recentTestsData);
@@ -253,7 +256,7 @@ export default function DashboardPage() {
                             {test.testType === 'practice' ? 'Practice Test' : test.testType}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {test.difficulty} • {new Date(test.createdAt).toLocaleDateString()}
+                            {test.difficulty} • {test.createdAt ? new Date(test.createdAt).toLocaleDateString() : 'Unknown Date'}
                           </p>
                         </div>
                       </div>

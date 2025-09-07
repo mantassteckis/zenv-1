@@ -36,6 +36,8 @@ export default function TestPage() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const finishButtonRef = useRef<HTMLButtonElement>(null);
+  const endTestRef = useRef<() => Promise<void>>();
 
   // Additional UI state for configuration
   const [activeTab, setActiveTab] = useState("practice");
@@ -60,35 +62,15 @@ export default function TestPage() {
     }
   }, []);
 
-  // Simple timer logic - starts when status is 'running', stops when not
-  useEffect(() => {
-    if (status === 'running') {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            endTest();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [status]);
-
   // Test lifecycle functions
   const endTest = useCallback(async () => {
+    // Prevent multiple calls to endTest
+    if (status !== 'running') {
+      console.log('endTest called but status is not running, ignoring');
+      return;
+    }
+    
+    // Immediately set status to prevent race conditions
     setStatus('finished');
     setView('results');
     if (intervalRef.current) {
@@ -125,11 +107,11 @@ export default function TestPage() {
           textLength: Math.max(0, textToType.length), // Ensure textLength is not negative
           userInput: userInput || '', // Ensure userInput is a string
           testType: 'practice', // Could be 'practice', 'ai-generated', etc.
-          difficulty: selectedDifficulty || 'medium', // Ensure difficulty has a default
-          testId: currentTestId || `practice_${Date.now()}`, // Ensure testId exists
+          difficulty: selectedDifficulty || 'Medium', // Ensure difficulty has a default and matches expected values
+          testId: currentTestId || `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure testId exists and is unique
         };
         
-        console.log('Submitting test result via Cloud Function:', testResultData);
+        console.log('Submitting test result via API route:', testResultData);
         console.log('Validation check - all values are valid:', {
           wpm: typeof wpm === 'number' && !isNaN(wpm),
           accuracy: typeof accuracy === 'number' && !isNaN(accuracy),
@@ -182,7 +164,42 @@ export default function TestPage() {
     } else {
       console.log('User not authenticated, not saving test result');
     }
-  }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId]);
+  }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId, status]);
+
+  // Update the ref whenever endTest changes
+  useEffect(() => {
+    endTestRef.current = endTest;
+  }, [endTest]);
+
+  // Simple timer logic - starts when status is 'running', stops when not
+  useEffect(() => {
+    if (status === 'running') {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            // Call endTest via ref when timer ends - this ensures proper state without dependency issues
+            if (endTestRef.current) {
+              endTestRef.current();
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [status]); // ← CRITICAL: Only depend on status, use ref for endTest
 
   const startTest = useCallback(() => {
     setUserInput("");
@@ -238,7 +255,7 @@ export default function TestPage() {
       setCurrentIndex(prev => prev + 1);
       
       // Check if test is complete
-      if (currentIndex + 1 >= textToType.length) {
+      if (currentIndex + 1 >= textToType.length && status === 'running') {
         endTest();
       }
     }
@@ -636,6 +653,7 @@ export default function TestPage() {
                 {status === 'running' ? 'Pause' : 'Resume'}
               </Button>
               <Button
+                ref={finishButtonRef}
                 onClick={endTest}
                 variant="outline"
                 className="border-border text-foreground hover:bg-accent bg-transparent"

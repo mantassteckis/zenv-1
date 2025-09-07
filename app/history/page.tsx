@@ -61,18 +61,21 @@ export default function HistoryPage() {
       }
 
       const querySnapshot = await getDocs(q);
-      const newTests = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        textLength: doc.data().textLength,
-        userInput: doc.data().userInput,
-        wpm: doc.data().wpm,
-        accuracy: doc.data().accuracy,
-        errors: doc.data().errors,
-        timeTaken: doc.data().timeTaken,
-        testType: doc.data().testType,
-        difficulty: doc.data().difficulty,
-        completedAt: doc.data().createdAt,
-      }));
+      const newTests = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          textLength: data.textLength,
+          userInput: data.userInput,
+          wpm: data.wpm,
+          accuracy: data.accuracy,
+          errors: data.errors,
+          timeTaken: data.timeTaken,
+          testType: data.testType,
+          difficulty: data.difficulty,
+          completedAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+        };
+      });
 
       if (loadMore) {
         setTestHistory(prev => [...prev, ...newTests]);
@@ -238,7 +241,7 @@ export default function HistoryPage() {
                 {testHistory.map((test, index) => (
                   <tr key={test.id || index} className="border-b border-border/50">
                     <td className="py-4 px-2 text-foreground">
-                      {new Date(test.completedAt).toLocaleDateString()}
+                      {test.completedAt ? new Date(test.completedAt).toLocaleDateString() : 'Unknown Date'}
                     </td>
                     <td className="py-4 px-2">
                       <span className="font-semibold text-primary">{test.wpm}</span>

@@ -315,10 +315,14 @@ export const calculateUserStats = async (uid: string) => {
     );
     
     const querySnapshot = await getDocs(q);
-    const testResults = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as any[];
+    const testResults = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+      };
+    }) as any[];
     
     console.log('📊 Found test results:', testResults.length);
     
