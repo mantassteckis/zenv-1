@@ -3,7 +3,9 @@ import { Inter, Fira_Code } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthProvider"
+import { DebugProvider } from "@/context/DebugProvider"
 import { UserPreferencesLoader } from "@/components/user-preferences-loader"
+import { DebugToggle } from "@/components/debug/DebugToggle"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,11 +34,14 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${firaCode.variable}`}>
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-          <AuthProvider>
-            <UserPreferencesLoader>
-              {children}
-            </UserPreferencesLoader>
-          </AuthProvider>
+          <DebugProvider>
+            <AuthProvider>
+              <UserPreferencesLoader>
+                {children}
+                <DebugToggle />
+              </UserPreferencesLoader>
+            </AuthProvider>
+          </DebugProvider>
         </ThemeProvider>
       </body>
     </html>

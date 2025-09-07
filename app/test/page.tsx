@@ -13,6 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Clock, Target, Zap, RotateCcw, BarChart3, Palette, Type } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider"
 import { PreMadeTest } from "@/lib/types/database"
+import { httpsCallable } from "firebase/functions"
+import { functions } from "@/lib/firebase/client"
+import { useDebugLogger } from "@/context/DebugProvider"
 // Removed Cloud Function imports - now using Next.js API route
 
 interface TypingCustomization {
@@ -24,11 +27,14 @@ export default function TestPage() {
   // Auth and user data
   const { user } = useAuth();
   
+  // Debug logging
+  const debugLogger = useDebugLogger();
+  
   // Core state management
   const router = useRouter();
   const [view, setView] = useState<'config' | 'active' | 'results'>('config');
   const [selectedTime, setSelectedTime] = useState(60);
-  const [textToType, setTextToType] = useState("The quick brown fox jumps over the lazy dog. This is a comprehensive typing test designed to evaluate your speed and accuracy. Practice makes perfect when it comes to developing muscle memory for efficient typing. The more you practice, the better you become at typing without looking at the keyboard. Focus on accuracy first, then gradually increase your speed as you become more comfortable with the keyboard layout. Typing is an essential skill in today's digital world, and mastering it can significantly improve your productivity. Whether you're writing emails, coding, or creating documents, good typing skills will save you time and effort. Remember to maintain proper posture while typing and take breaks to avoid strain. The goal is to type smoothly and efficiently without making too many errors. Keep practicing regularly to see continuous improvement in your typing abilities.");
+  const [textToType, setTextToType] = useState("");
   const [status, setStatus] = useState<'waiting' | 'running' | 'paused' | 'finished'>('waiting');
   const [timeLeft, setTimeLeft] = useState(60);
   const [userInput, setUserInput] = useState("");
@@ -55,6 +61,10 @@ export default function TestPage() {
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
   const [testsLoading, setTestsLoading] = useState(false);
   const [testsError, setTestsError] = useState<string | null>(null);
+
+  // AI-generated tests state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiTest, setAiTest] = useState<any>(null); // Generated test object
 
   // Load saved preferences
   useEffect(() => {
@@ -128,10 +138,10 @@ export default function TestPage() {
       setSelectedTestId(null);
     }
     
-    // Only set dummy text when switching TO AI tab, not when staying on practice
+    // Clear text when switching to AI tab - AI tests will set their own content
     if (activeTab === 'ai' && selectedTestId) {
-      console.log('🤖 Switching to AI tab - setting default text');
-      setTextToType("The quick brown fox jumps over the lazy dog. This is a comprehensive typing test designed to evaluate your speed and accuracy. Practice makes perfect when it comes to developing muscle memory for efficient typing. The more you practice, the better you become at typing without looking at the keyboard. Focus on accuracy first, then gradually increase your speed as you become more comfortable with the keyboard layout. Typing is an essential skill in today's digital world, and mastering it can significantly improve your productivity. Whether you're writing emails, coding, or creating documents, good typing skills will save you time and effort. Remember to maintain proper posture while typing and take breaks to avoid strain. The goal is to type smoothly and efficiently without making too many errors. Keep practicing regularly to see continuous improvement in your typing abilities.");
+      console.log('🤖 Switching to AI tab - clearing practice test selection');
+      setTextToType("");
       setCurrentTestId(null);
     }
   }, [activeTab, selectedTestId]);
@@ -163,6 +173,219 @@ export default function TestPage() {
     console.log('✅ Test selection complete. Current textToType length:', test.text.length);
     console.log('🚀 Ready to start typing the selected test.');
   }, [selectedTime]);
+
+  // AI Test Generation Handler
+  const handleGenerateAiTest = useCallback(async () => {
+    debugLogger.info('AI_GENERATION', 'Starting AI test generation process', {
+      hasUser: !!user,
+      topic: topic.trim(),
+      selectedDifficulty,
+      selectedTime
+    }, 'app/test/page.tsx:handleGenerateAiTest');
+
+    if (!user) {
+      debugLogger.error('AI_GENERATION', 'User not authenticated', { user }, 'app/test/page.tsx:handleGenerateAiTest');
+      alert('Please sign in to generate AI tests');
+      return;
+    }
+
+    if (!topic.trim()) {
+      debugLogger.warn('AI_GENERATION', 'Topic is empty or whitespace only', { topic }, 'app/test/page.tsx:handleGenerateAiTest');
+      alert('Please enter a topic for the AI test');
+      return;
+    }
+
+    debugLogger.info('AI_GENERATION', 'Input validation passed, starting generation', {
+      userId: user.uid,
+      topicLength: topic.trim().length,
+      difficulty: selectedDifficulty,
+      timeLimit: selectedTime
+    }, 'app/test/page.tsx:handleGenerateAiTest');
+
+    setIsGenerating(true);
+    setAiTest(null);
+
+    try {
+      // Get user's autoSaveAiTests preference (default to false)
+      const autoSaveAiTests = user.profile?.settings?.autoSaveAiTests || false;
+      
+      debugLogger.info('AI_GENERATION', 'Retrieved user preferences', {
+        userId: user.uid,
+        autoSaveAiTests,
+        hasProfile: !!user.profile,
+        hasSettings: !!user.profile?.settings
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      // Prepare request data
+      const requestData = {
+        topic: topic.trim(),
+        difficulty: selectedDifficulty,
+        saveTest: autoSaveAiTests
+      };
+
+      debugLogger.info('AI_GENERATION', 'Preparing Cloud Function call', {
+        requestData,
+        functionsExists: !!functions
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      // Call generateAiTest Cloud Function
+      const generateAiTestFn = httpsCallable(functions, 'generateAiTest');
+      
+      debugLogger.debug('AI_GENERATION', 'Calling generateAiTest Cloud Function', {
+        functionName: 'generateAiTest',
+        requestDataSize: JSON.stringify(requestData).length
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      const result = await generateAiTestFn(requestData);
+
+      debugLogger.info('AI_GENERATION', 'Cloud Function call completed', {
+        hasResult: !!result,
+        hasData: !!result.data,
+        resultKeys: result ? Object.keys(result) : []
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      const data = result.data as any;
+      
+      debugLogger.debug('AI_GENERATION', 'Processing Cloud Function response', {
+        dataType: typeof data,
+        dataKeys: data ? Object.keys(data) : [],
+        hasText: !!(data?.text),
+        textLength: data?.text?.length || 0,
+        hasTestId: !!(data?.testId),
+        success: data?.success
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      if (!data) {
+        debugLogger.error('AI_GENERATION', 'Cloud Function returned no data', { result }, 'app/test/page.tsx:handleGenerateAiTest');
+        throw new Error('Cloud Function returned no data');
+      }
+
+      if (!data.text) {
+        debugLogger.error('AI_GENERATION', 'Cloud Function returned no text content', { data }, 'app/test/page.tsx:handleGenerateAiTest');
+        throw new Error('No text content generated');
+      }
+
+      // Create test object similar to PreMadeTest structure
+      const generatedTest = {
+        id: data.testId || `ai_${Date.now()}`,
+        text: data.text,
+        difficulty: selectedDifficulty,
+        category: 'ai_generated',
+        source: 'AI Generated',
+        wordCount: data.wordCount || data.text.split(' ').length,
+        timeLimit: selectedTime,
+        topic: topic.trim(),
+        saved: data.saved || false
+      };
+
+      debugLogger.info('AI_GENERATION', 'Generated test object created', {
+        testId: generatedTest.id,
+        textLength: generatedTest.text.length,
+        wordCount: generatedTest.wordCount,
+        saved: generatedTest.saved,
+        category: generatedTest.category
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      console.log('🤖 AI-generated text preview:', data.text.substring(0, 100) + '...');
+      
+      setAiTest(generatedTest);
+      console.log('✅ AI test object created and set to state');
+      
+      // Auto-select the AI test for better UX (user doesn't need to click the card)
+      console.log('🤖 Auto-selecting the generated AI test');
+      setTextToType(generatedTest.text);
+      setCurrentTestId(generatedTest.id);
+      console.log('🤖 AI test auto-selected with text length:', generatedTest.text.length);
+      debugLogger.info('AI_GENERATION', 'AI test generation completed successfully', {
+        testReady: true,
+        testId: generatedTest.id
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+    } catch (error: any) {
+      debugLogger.critical('AI_GENERATION', 'AI test generation failed', {
+        errorMessage: error?.message || 'Unknown error',
+        errorCode: error?.code,
+        errorDetails: error?.details,
+        stack: error?.stack,
+        userId: user?.uid,
+        topic: topic.trim(),
+        difficulty: selectedDifficulty
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+
+      // Show user-friendly error message
+      const userMessage = error?.message || 'Unknown error occurred during test generation';
+      alert(`Failed to generate test: ${userMessage}`);
+    } finally {
+      setIsGenerating(false);
+      debugLogger.debug('AI_GENERATION', 'AI generation process ended', {
+        isGenerating: false
+      }, 'app/test/page.tsx:handleGenerateAiTest');
+    }
+  }, [user, topic, selectedDifficulty, selectedTime, debugLogger]);
+
+  // AI Test Selection Handler
+  const handleAiTestSelection = useCallback(() => {
+    console.log('🤖 AI TEST CARD CLICKED - Selection started', { 
+      hasAiTest: !!aiTest, 
+      testId: aiTest?.id,
+      currentTab: activeTab,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!aiTest) {
+      console.warn('❌ CRITICAL: No AI test available for selection');
+      return;
+    }
+
+    console.log('🔍 BEFORE TEXT UPDATE - Current state:', {
+      aiTestId: aiTest.id,
+      aiTestTopic: aiTest.topic,
+      aiTextLength: aiTest.text?.length,
+      aiTextPreview: `"${aiTest.text.substring(0, 50)}..."`,
+      currentTextToType: `"${textToType.substring(0, 50)}..."`,
+      currentTextLength: textToType.length,
+      isCurrentlyDummy: textToType.includes('The quick brown fox'),
+      areTextsEqual: textToType === aiTest.text
+    });
+    
+    // Update the text to type with AI generated content
+    console.log('🔄 UPDATING textToType with AI content...');
+    setTextToType(aiTest.text);
+    
+    console.log('🆔 UPDATING currentTestId...');
+    setCurrentTestId(aiTest.id);
+    
+    // Clear any existing user input and reset typing state
+    console.log('🔄 RESETTING typing state...');
+    setUserInput("");
+    setCurrentIndex(0);
+    setErrors(0);
+    setStatus('waiting');
+    setTimeLeft(selectedTime);
+    
+    console.log('✅ AI TEST SELECTION COMPLETE - State updates dispatched', {
+      newTestId: aiTest.id,
+      newTextLength: aiTest.text.length,
+      resetComplete: true
+    });
+    
+    // Auto-select the AI test if there's no current text (for better UX)
+    if (!textToType || textToType.length === 0) {
+      console.log('🤖 Auto-selecting AI test since no text is set');
+      // No need for timeout since we're in the same function
+      // The text will be set synchronously above
+    }
+    
+    // Verify state update worked (React state updates are async)
+    setTimeout(() => {
+      console.log('🔍 VERIFICATION: Checking if textToType was actually updated:', {
+        currentTextToType: `"${textToType.substring(0, 50)}..."`,
+        expectedAiText: `"${aiTest.text.substring(0, 50)}..."`,
+        wasUpdated: textToType === aiTest.text,
+        stillDummy: textToType.includes('The quick brown fox')
+      });
+    }, 100);
+  }, [aiTest, selectedTime, textToType, activeTab]);
 
   // Test lifecycle functions
   const endTest = useCallback(async () => {
@@ -208,12 +431,18 @@ export default function TestPage() {
           timeTaken: Math.max(0, timeTaken), // Ensure timeTaken is not negative
           textLength: Math.max(0, textToType.length), // Ensure textLength is not negative
           userInput: userInput || '', // Ensure userInput is a string
-          testType: 'practice', // Could be 'practice', 'ai-generated', etc.
+          testType: activeTab === 'ai' ? 'ai-generated' : 'practice', // Dynamic test type based on active tab
           difficulty: selectedDifficulty || 'Medium', // Ensure difficulty has a default and matches expected values
           testId: currentTestId || `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure testId exists and is unique
         };
         
-        console.log('Submitting test result via API route:', testResultData);
+        console.log('💾 SUBMITTING TEST RESULT via API route:', {
+          ...testResultData,
+          isAiGenerated: activeTab === 'ai',
+          hasAiTest: !!aiTest,
+          aiTestId: aiTest?.id,
+          aiTestTopic: aiTest?.topic
+        });
         console.log('Validation check - all values are valid:', {
           wpm: typeof wpm === 'number' && !isNaN(wpm),
           accuracy: typeof accuracy === 'number' && !isNaN(accuracy),
@@ -273,6 +502,28 @@ export default function TestPage() {
     endTestRef.current = endTest;
   }, [endTest]);
 
+  // Track textToType state changes for critical debugging
+  useEffect(() => {
+    console.log('🔄 textToType STATE CHANGED:', {
+      newLength: textToType.length,
+      isDummyText: textToType.includes('The quick brown fox'),
+      isAiText: !textToType.includes('The quick brown fox') && textToType.length > 100,
+      preview: `"${textToType.substring(0, 50)}..."`,
+      timestamp: new Date().toISOString(),
+      stackTrace: new Error().stack?.split('\n').slice(1, 4).join(' | ')
+    });
+  }, [textToType]);
+
+  useEffect(() => {
+    if (debugLogger.isDebugEnabled && aiTest) {
+      console.log('🔍 DEBUG: aiTest updated', {
+        testId: aiTest.id,
+        textLength: aiTest.text?.length || 0,
+        topic: aiTest.topic
+      });
+    }
+  }, [aiTest, debugLogger.isDebugEnabled]);
+
   // Simple timer logic - starts when status is 'running', stops when not
   useEffect(() => {
     if (status === 'running') {
@@ -304,6 +555,30 @@ export default function TestPage() {
   }, [status]); // ← CRITICAL: Only depend on status, use ref for endTest
 
   const startTest = useCallback(() => {
+    console.log('🚀 START TYPING CLICKED - Starting test with current state:', {
+      textToTypePreview: `"${textToType.substring(0, 50)}..."`,
+      textToTypeLength: textToType.length,
+      isDummyText: textToType.includes('The quick brown fox'),
+      isAiText: !textToType.includes('The quick brown fox') && textToType.length > 100,
+      hasAiTest: !!aiTest,
+      aiTestId: aiTest?.id,
+      currentTestId: currentTestId,
+      activeTab,
+      timestamp: new Date().toISOString()
+    });
+    
+    // CRITICAL CHECK: If we're in AI tab but still have dummy text, something is wrong
+    if (activeTab === 'ai' && textToType.includes('The quick brown fox')) {
+      console.error('🚨 CRITICAL ISSUE: AI tab selected but textToType still contains dummy text!');
+      console.error('🚨 AI Test State:', {
+        aiTest: aiTest ? {
+          id: aiTest.id,
+          textLength: aiTest.text?.length,
+          textPreview: aiTest.text?.substring(0, 50)
+        } : 'null'
+      });
+    }
+    
     setUserInput("");
     setCurrentIndex(0);
     setErrors(0);
@@ -311,16 +586,26 @@ export default function TestPage() {
     setStatus('waiting');
     setView('active');
     
-    // Generate a test ID for practice tests
-    // For now, we'll use a simple timestamp-based ID
-    // In the future, this could be a proper PreMadeTest ID
-    const testId = `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setCurrentTestId(testId);
+    // Generate a test ID for practice tests only (don't override AI test IDs)
+    if (activeTab === 'practice' || !currentTestId) {
+      const testId = `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setCurrentTestId(testId);
+      console.log('🆔 Generated new practice test ID:', testId);
+    } else {
+      console.log('🆔 Keeping existing test ID (AI test):', currentTestId);
+    }
+    
+    console.log('✅ START TEST COMPLETE - View switched to active', {
+      finalTextPreview: `"${textToType.substring(0, 50)}..."`,
+      finalTextLength: textToType.length,
+      finalTestId: currentTestId,
+      readyToType: true
+    });
     
     setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
-  }, [selectedTime]);
+  }, [selectedTime, textToType, aiTest, activeTab, currentTestId]);
 
   const tryAgain = useCallback(() => {
     setView('config');
@@ -391,6 +676,24 @@ export default function TestPage() {
 
   // Render text with character highlighting
   const renderText = () => {
+    // One-time diagnostic to track what's being rendered (prevent infinite loops)
+    if (textToType.length > 0) {
+      const textSignature = textToType.substring(0, 20);
+      if ((window as any).zenTypeLastRenderLog !== textSignature) {
+        console.log('🎨 RENDERING TEXT - What user sees:', {
+          textLength: textToType.length,
+          textPreview: `"${textToType.substring(0, 50)}..."`,
+          isDummyText: textToType.includes('The quick brown fox'),
+          isAiContent: !textToType.includes('The quick brown fox') && textToType.length > 100,
+          currentTab: activeTab,
+          hasAiTest: !!aiTest,
+          aiTestId: aiTest?.id,
+          timestamp: new Date().toISOString()
+        });
+        (window as any).zenTypeLastRenderLog = textSignature;
+      }
+    }
+    
     return textToType.split('').map((char, index) => {
       let className = "transition-colors duration-150";
       
@@ -664,15 +967,100 @@ export default function TestPage() {
                         className="bg-accent border-border text-foreground placeholder:text-muted-foreground"
                       />
                     </div>
+                    
+                    {/* AI Generation Section */}
+                    {!isGenerating && !aiTest && (
+                      <div className="mt-4">
+                        <Button
+                          onClick={handleGenerateAiTest}
+                          disabled={!topic.trim() || isGenerating}
+                          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                        >
+                          {isGenerating ? 'Generating...' : 'Generate Test'}
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Loading Animation */}
+                    {isGenerating && (
+                      <div className="mt-4 text-center space-y-4">
+                        <div className="animate-pulse">
+                          <div className="flex justify-center mb-4">
+                            <div className="h-8 w-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full animate-bounce"></div>
+                          </div>
+                          <p className="text-foreground text-lg">Your expert typing coach is generating a new test...</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Generated Test Display */}
+                    {console.log('🔍 AI TEST CARD RENDER CHECK:', {
+                      hasAiTest: !!aiTest,
+                      aiTestId: aiTest?.id,
+                      isGenerating,
+                      shouldShowCard: aiTest && !isGenerating,
+                      topic,
+                      aiTestTextLength: aiTest?.text?.length,
+                      timestamp: new Date().toISOString()
+                    })}
+                    {aiTest && !isGenerating && (
+                      <div className="mt-4">
+                        {console.log('🎨 AI TEST CARD IS BEING RENDERED NOW!', {
+                          aiTestId: aiTest.id,
+                          topic,
+                          handlerExists: typeof handleAiTestSelection === 'function'
+                        })}
+                        <GlassCard 
+                          className={`p-4 border-2 cursor-pointer transition-all duration-200 hover:border-primary/50`}
+                          onClick={(e) => {
+                            console.log('🔥 AI TEST CARD CLICKED! Event triggered:', {
+                              aiTestId: aiTest?.id,
+                              eventType: e.type,
+                              timestamp: new Date().toISOString()
+                            });
+                            handleAiTestSelection();
+                          }}
+                          style={{ backgroundColor: 'rgba(255, 0, 0, 0.1)' }} // Temporary red tint for visibility
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="font-semibold text-foreground">AI Generated: {topic}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {selectedDifficulty} • ~{aiTest?.wordCount || 100} words
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            {aiTest?.text?.substring(0, 100)}...
+                          </p>
+                        </GlassCard>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
               <Button
-                onClick={startTest}
-                disabled={activeTab === 'practice' && !selectedTestId}
+                onClick={() => {
+                  console.log('🚀 START TYPING BUTTON CLICKED:', {
+                    textToType: textToType || 'EMPTY',
+                    textLength: textToType?.length || 0,
+                    hasText: !!textToType && textToType.length > 0,
+                    currentActiveTab: activeTab,
+                    hasAiTest: !!aiTest,
+                    aiTestId: aiTest?.id,
+                    selectedTestId: selectedTestId || 'none',
+                    shouldBeDisabled: (activeTab === 'practice' && !selectedTestId) || (activeTab === 'ai' && !aiTest),
+                    timestamp: new Date().toISOString()
+                  });
+                  startTest();
+                }}
+                disabled={
+                  (activeTab === 'practice' && !selectedTestId) || 
+                  (activeTab === 'ai' && !aiTest)
+                }
                 className={`
                   w-full text-xl py-6
-                  ${activeTab === 'practice' && !selectedTestId
+                  ${((activeTab === 'practice' && !selectedTestId) || (activeTab === 'ai' && !aiTest))
                     ? 'bg-muted text-muted-foreground cursor-not-allowed'
                     : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                   }
@@ -680,6 +1068,8 @@ export default function TestPage() {
               >
                 {activeTab === 'practice' && !selectedTestId 
                   ? 'Select a test to begin'
+                  : activeTab === 'ai' && !aiTest
+                  ? 'Generate a test to begin'
                   : 'Start Typing'
                 }
               </Button>

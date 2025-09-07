@@ -23,6 +23,7 @@ export interface UserProfile {
   settings?: {
     keyboardSounds?: boolean;
     visualFeedback?: boolean;
+    autoSaveAiTests?: boolean;
   };
   stats: {
     rank: string;

@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [bio, setBio] = useState("")
   const [keyboardSounds, setKeyboardSounds] = useState(true)
   const [visualFeedback, setVisualFeedback] = useState(true)
+  const [autoSaveAiTests, setAutoSaveAiTests] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [isSaving, setIsSaving] = useState(false)
@@ -54,6 +55,7 @@ export default function SettingsPage() {
       setSelectedFont(profile.preferredFontId || "fira-code")
       setKeyboardSounds(profile.settings?.keyboardSounds ?? true)
       setVisualFeedback(profile.settings?.visualFeedback ?? true)
+      setAutoSaveAiTests(profile.settings?.autoSaveAiTests ?? false)
     }
   }, [profile])
 
@@ -337,6 +339,38 @@ export default function SettingsPage() {
                   }} 
                 />
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="auto-save-ai-tests" className="text-foreground font-medium">
+                    Auto-save AI-Generated Tests
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically save tests you generate to the public library
+                  </p>
+                </div>
+                <Switch 
+                  id="auto-save-ai-tests" 
+                  checked={autoSaveAiTests} 
+                  onCheckedChange={async (checked) => {
+                    setAutoSaveAiTests(checked)
+                    // Save to user profile if user is logged in
+                    if (user && profile) {
+                      try {
+                        await updateUserProfile(user.uid, { 
+                          settings: { 
+                            ...profile.settings, 
+                            autoSaveAiTests: checked 
+                          } 
+                        })
+                        console.log("Auto-save AI tests preference saved:", checked)
+                      } catch (error) {
+                        console.error("Error saving auto-save AI tests preference:", error)
+                      }
+                    }
+                  }} 
+                />
+              </div>
             </div>
           </GlassCard>
 
@@ -385,6 +419,7 @@ export default function SettingsPage() {
                     settings: {
                       keyboardSounds,
                       visualFeedback,
+                      autoSaveAiTests,
                     },
                   })
                   console.log("Profile updated successfully")
