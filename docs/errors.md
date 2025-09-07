@@ -527,6 +527,50 @@ const handleTestSelection = useCallback((test: PreMadeTest) => {
 
 ---
 
+## 📝 Recent Error Records
+
+### **CORS Policy Error & Test Result Saving Failure (Live Deployment)**
+
+- **Date**: September 7, 2025
+- **Severity**: Critical
+- **Symptoms**: 
+  - Test results not saving on live production site
+  - Browser CORS policy errors in production
+  - `Access to fetch at 'https://us-central1-solotype-23c1f.cloudfunctions.net/submitTestResult' has been blocked by CORS policy`
+  - Firebase SDK making direct HTTP requests instead of using `httpsCallable`
+
+### **Root Causes Identified**
+1. **Firebase Client Initialization Issues** - Problematic `let` declarations with try-catch blocks causing timing issues
+2. **Complex Error Handling** - Over-engineered function calls causing Firebase SDK to fallback to direct HTTP requests
+3. **CORS Configuration Conflicts** - Manual CORS settings on `onCall` functions (which don't need them)
+4. **Authentication Token Flow** - Complex token validation interfering with Firebase's built-in auth handling
+
+### **Solution Applied**
+1. **Reverted to Working Commit** - `git restore .` back to commit `bc1dcc9d59065757e24acb7d620f0b73211da3ad`
+2. **Used Git-Based Recovery** - Instead of complex fixes, reverted to last known working state
+3. **Local Testing Confirmed** - Verified local version works with original Firebase client setup
+4. **File Organization** - Moved documentation and logs to proper folders without breaking functionality
+
+### **Key Lessons Learned**
+1. **Don't over-engineer Firebase setup** - The original simple const declarations worked perfectly
+2. **Git commits are lifesavers** - Having working commits to revert to saved hours of debugging
+3. **Test locally before deploying** - Local development environment catches issues early
+4. **Firebase SDK handles auth internally** - Don't try to manually manage what Firebase does automatically
+5. **Simple is better** - Complex error handling can cause more problems than it solves
+
+### **Prevention Checklist**
+- [ ] Always test Firebase functions locally before deploying
+- [ ] Keep Firebase client initialization simple with const declarations
+- [ ] Don't add manual CORS to onCall functions (Firebase handles this)
+- [ ] Avoid over-engineering error handling for Firebase SDK
+- [ ] Make frequent git commits of working states
+- [ ] Test production deployment immediately after changes
+
+### **Current Status**
+🔄 **Working locally, needs production deployment**: Local version confirmed working with test result saving functional. Production deployment pending with reverted codebase.
+
+---
+
 ## 📝 Future Error Records
 
 *This section will be updated as new errors are encountered and resolved.*

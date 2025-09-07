@@ -1,0 +1,476 @@
+{
+  "sessionId": "debug_1757246638468_u4577v1rp",
+  "exportedAt": "2025-09-07T12:12:37.841Z",
+  "debugEnabled": true,
+  "totalLogs": 30,
+  "logs": [
+    {
+      "id": "log_0",
+      "timestamp": 1757246708868,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Starting AI test generation process",
+      "data": {
+        "hasUser": true,
+        "topic": "indian history",
+        "selectedDifficulty": "Medium",
+        "selectedTime": 30
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_1",
+      "timestamp": 1757246708868,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Input validation passed, starting generation",
+      "data": {
+        "userId": "UOCTljqm45MfFqFZ6GNiuy7DSzj1",
+        "topicLength": 14,
+        "difficulty": "Medium",
+        "timeLimit": 30
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_2",
+      "timestamp": 1757246708868,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Retrieved user preferences",
+      "data": {
+        "userId": "UOCTljqm45MfFqFZ6GNiuy7DSzj1",
+        "autoSaveAiTests": false,
+        "hasProfile": false,
+        "hasSettings": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_3",
+      "timestamp": 1757246708868,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Preparing Cloud Function call",
+      "data": {
+        "requestData": {
+          "topic": "indian history",
+          "difficulty": "Medium",
+          "saveTest": false
+        },
+        "functionsExists": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_4",
+      "timestamp": 1757246708868,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Calling generateAiTest Cloud Function",
+      "data": {
+        "functionName": "generateAiTest",
+        "requestDataSize": 65
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_5",
+      "timestamp": 1757246709366,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Cloud Function call completed",
+      "data": {
+        "hasResult": true,
+        "hasData": true,
+        "resultKeys": [
+          "data"
+        ]
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_6",
+      "timestamp": 1757246709366,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Processing Cloud Function response",
+      "data": {
+        "dataType": "object",
+        "dataKeys": [
+          "success",
+          "text",
+          "testId",
+          "wordCount",
+          "saved",
+          "message"
+        ],
+        "hasText": true,
+        "textLength": 524,
+        "hasTestId": false,
+        "success": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_7",
+      "timestamp": 1757246709366,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Generated test object created",
+      "data": {
+        "testId": "ai_1757246709366",
+        "textLength": 524,
+        "wordCount": 56,
+        "saved": false,
+        "category": "ai_generated"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_8",
+      "timestamp": 1757246709366,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "AI test generation completed successfully",
+      "data": {
+        "testReady": true,
+        "testId": "ai_1757246709366"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_9",
+      "timestamp": 1757246709366,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "AI generation process ended",
+      "data": {
+        "isGenerating": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_10",
+      "timestamp": 1757246998460,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Starting AI test generation process",
+      "data": {
+        "hasUser": true,
+        "topic": "science oh home cooking",
+        "selectedDifficulty": "Medium",
+        "selectedTime": 60
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_11",
+      "timestamp": 1757246998460,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Input validation passed, starting generation",
+      "data": {
+        "userId": "UOCTljqm45MfFqFZ6GNiuy7DSzj1",
+        "topicLength": 23,
+        "difficulty": "Medium",
+        "timeLimit": 60
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_12",
+      "timestamp": 1757246998460,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Retrieved user preferences",
+      "data": {
+        "userId": "UOCTljqm45MfFqFZ6GNiuy7DSzj1",
+        "autoSaveAiTests": false,
+        "hasProfile": false,
+        "hasSettings": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_13",
+      "timestamp": 1757246998460,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Preparing Cloud Function call",
+      "data": {
+        "requestData": {
+          "topic": "science oh home cooking",
+          "difficulty": "Medium",
+          "saveTest": false
+        },
+        "functionsExists": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_14",
+      "timestamp": 1757246998460,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Calling generateAiTest Cloud Function",
+      "data": {
+        "functionName": "generateAiTest",
+        "requestDataSize": 74
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_15",
+      "timestamp": 1757246998845,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Cloud Function call completed",
+      "data": {
+        "hasResult": true,
+        "hasData": true,
+        "resultKeys": [
+          "data"
+        ]
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_16",
+      "timestamp": 1757246998845,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Processing Cloud Function response",
+      "data": {
+        "dataType": "object",
+        "dataKeys": [
+          "success",
+          "text",
+          "testId",
+          "wordCount",
+          "saved",
+          "message"
+        ],
+        "hasText": true,
+        "textLength": 536,
+        "hasTestId": false,
+        "success": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_17",
+      "timestamp": 1757246998845,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Generated test object created",
+      "data": {
+        "testId": "ai_1757246998845",
+        "textLength": 536,
+        "wordCount": 62,
+        "saved": false,
+        "category": "ai_generated"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_18",
+      "timestamp": 1757246998845,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "AI test generation completed successfully",
+      "data": {
+        "testReady": true,
+        "testId": "ai_1757246998845"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_19",
+      "timestamp": 1757246998845,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "AI generation process ended",
+      "data": {
+        "isGenerating": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_20",
+      "timestamp": 1757247058966,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Starting AI test generation process",
+      "data": {
+        "hasUser": true,
+        "topic": "science oh home cooking",
+        "selectedDifficulty": "Medium",
+        "selectedTime": 300
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_21",
+      "timestamp": 1757247058966,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Input validation passed, starting generation",
+      "data": {
+        "userId": "UOCTljqm45MfFqFZ6GNiuy7DSzj1",
+        "topicLength": 23,
+        "difficulty": "Medium",
+        "timeLimit": 300
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_22",
+      "timestamp": 1757247058966,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Retrieved user preferences",
+      "data": {
+        "userId": "UOCTljqm45MfFqFZ6GNiuy7DSzj1",
+        "autoSaveAiTests": false,
+        "hasProfile": false,
+        "hasSettings": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_23",
+      "timestamp": 1757247058966,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Preparing Cloud Function call",
+      "data": {
+        "requestData": {
+          "topic": "science oh home cooking",
+          "difficulty": "Medium",
+          "saveTest": false
+        },
+        "functionsExists": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_24",
+      "timestamp": 1757247058966,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Calling generateAiTest Cloud Function",
+      "data": {
+        "functionName": "generateAiTest",
+        "requestDataSize": 74
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_25",
+      "timestamp": 1757247059315,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Cloud Function call completed",
+      "data": {
+        "hasResult": true,
+        "hasData": true,
+        "resultKeys": [
+          "data"
+        ]
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_26",
+      "timestamp": 1757247059315,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Processing Cloud Function response",
+      "data": {
+        "dataType": "object",
+        "dataKeys": [
+          "success",
+          "text",
+          "testId",
+          "wordCount",
+          "saved",
+          "message"
+        ],
+        "hasText": true,
+        "textLength": 580,
+        "hasTestId": false,
+        "success": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_27",
+      "timestamp": 1757247059315,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Generated test object created",
+      "data": {
+        "testId": "ai_1757247059315",
+        "textLength": 580,
+        "wordCount": 66,
+        "saved": false,
+        "category": "ai_generated"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_28",
+      "timestamp": 1757247059315,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "AI test generation completed successfully",
+      "data": {
+        "testReady": true,
+        "testId": "ai_1757247059315"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    },
+    {
+      "id": "log_29",
+      "timestamp": 1757247059315,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "AI generation process ended",
+      "data": {
+        "isGenerating": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757246638468_u4577v1rp"
+    }
+  ]
+}
