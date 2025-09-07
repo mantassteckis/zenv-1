@@ -1,5 +1,36 @@
 # API Endpoints
 
+## Pre-made Test Management
+
+### Test Fetching
+
+#### `GET /api/tests` (Next.js API Route)
+- **Purpose**: Fetch pre-made typing tests from Firestore with optional filtering
+- **Authentication**: None required (public endpoint)
+- **Query Parameters**:
+  - `difficulty`: Optional - Filter by difficulty ('Easy', 'Medium', 'Hard')
+  - `timeLimit`: Optional - Filter by time limit ('30s', '1m', '2m', '5m')
+  - `category`: Optional - Filter by test category (e.g., 'Technology', 'Nature', 'History')
+- **Response**: 
+  ```typescript
+  {
+    tests: PreMadeTest[];
+    total: number;
+  }
+  ```
+- **PreMadeTest Structure**:
+  ```typescript
+  {
+    id: string;
+    text: string;
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    timeLimit: '30s' | '1m' | '2m' | '5m';
+    category: string;
+  }
+  ```
+- **Error Handling**: Returns appropriate HTTP status codes and detailed error messages
+- **Usage**: Called by test page to populate practice test options
+
 ## User Profile Management
 
 ### Firestore Functions (lib/firebase/firestore.ts)

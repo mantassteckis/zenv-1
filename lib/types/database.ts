@@ -5,7 +5,8 @@ import { Timestamp } from 'firebase/firestore';
 // Collection Names
 export const COLLECTIONS = {
   PROFILES: 'profiles',
-  PRE_MADE_TESTS: 'preMadeTests',
+  PRE_MADE_TESTS: 'preMadeTests', // Legacy name - actual collection is test_contents
+  TEST_CONTENTS: 'test_contents', // Actual collection name in Firestore
   AI_GENERATED_TESTS: 'aiGeneratedTests',
   TEST_RESULTS: 'testResults', // This will be a subcollection under profiles
 };
@@ -35,8 +36,10 @@ export interface PreMadeTest {
   id: string;
   text: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  timeLimit: '30s' | '1m' | '2m' | '5m';
-  category: string; // e.g., 'Technology', 'Nature', 'History'
+  category: string; // e.g., 'basic_typing', 'general_practice', 'technical_typing'
+  source: string; // e.g., 'Technology', 'Nature', 'History', 'Practice'
+  wordCount: number; // Number of words in the test
+  createdAt: string; // ISO string timestamp
 }
 
 export interface TestResult {

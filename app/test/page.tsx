@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Clock, Target, Zap, RotateCcw, BarChart3, Palette, Type } from "lucide-react"
 import { useAuth } from "@/context/AuthProvider"
+import { PreMadeTest } from "@/lib/types/database"
 // Removed Cloud Function imports - now using Next.js API route
 
 interface TypingCustomization {
@@ -49,6 +50,12 @@ export default function TestPage() {
     font: "fira-code",
   });
 
+  // Pre-made tests management state
+  const [preMadeTests, setPreMadeTests] = useState<PreMadeTest[]>([]);
+  const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
+  const [testsLoading, setTestsLoading] = useState(false);
+  const [testsError, setTestsError] = useState<string | null>(null);
+
   // Load saved preferences
   useEffect(() => {
     const savedTheme = localStorage.getItem("zenTypeTheme");
@@ -61,6 +68,100 @@ export default function TestPage() {
       setTypingCustomization((prev) => ({ ...prev, font: savedFont }));
     }
   }, []);
+
+  // Fetch pre-made tests from API
+  useEffect(() => {
+    const fetchTests = async () => {
+      // Only fetch for practice tests
+      if (activeTab !== 'practice') {
+        return;
+      }
+
+      setTestsLoading(true);
+      setTestsError(null);
+      
+      try {
+        // Construct query string with current filters
+        const queryParams = new URLSearchParams();
+        
+        if (selectedDifficulty) {
+          queryParams.append('difficulty', selectedDifficulty);
+        }
+        
+        // Note: We no longer filter by timeLimit since tests are now wordCount-based
+        // Users can select their preferred time duration independently of test content
+
+        console.log(`🔍 Fetching tests with params: ${queryParams.toString()}`);
+        
+        const response = await fetch(`/api/tests?${queryParams.toString()}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        console.log(`✅ Fetched ${data.tests?.length || 0} pre-made tests`);
+        setPreMadeTests(data.tests || []);
+        
+      } catch (error) {
+        console.error('❌ Error fetching pre-made tests:', error);
+        setTestsError(error instanceof Error ? error.message : 'Failed to load tests');
+        setPreMadeTests([]);
+      } finally {
+        setTestsLoading(false);
+      }
+    };
+
+    fetchTests();
+  }, [selectedDifficulty, activeTab]); // Removed selectedTime since tests are now wordCount-based
+
+  // Handle tab switching logic
+  useEffect(() => {
+    if (activeTab !== 'practice' && selectedTestId) {
+      console.log('🔄 Switching away from practice tab - clearing selected test');
+      setSelectedTestId(null);
+    }
+    
+    // Only set dummy text when switching TO AI tab, not when staying on practice
+    if (activeTab === 'ai' && selectedTestId) {
+      console.log('🤖 Switching to AI tab - setting default text');
+      setTextToType("The quick brown fox jumps over the lazy dog. This is a comprehensive typing test designed to evaluate your speed and accuracy. Practice makes perfect when it comes to developing muscle memory for efficient typing. The more you practice, the better you become at typing without looking at the keyboard. Focus on accuracy first, then gradually increase your speed as you become more comfortable with the keyboard layout. Typing is an essential skill in today's digital world, and mastering it can significantly improve your productivity. Whether you're writing emails, coding, or creating documents, good typing skills will save you time and effort. Remember to maintain proper posture while typing and take breaks to avoid strain. The goal is to type smoothly and efficiently without making too many errors. Keep practicing regularly to see continuous improvement in your typing abilities.");
+      setCurrentTestId(null);
+    }
+  }, [activeTab, selectedTestId]);
+
+  // Test selection handler
+  const handleTestSelection = useCallback((test: PreMadeTest) => {
+    console.log('🎯 Test selected:', test.id, 'Source:', test.source, 'WordCount:', test.wordCount);
+    console.log('📝 Test text preview:', test.text.substring(0, 100) + '...');
+    
+    // Update selected test ID
+    setSelectedTestId(test.id);
+    
+    // Update the text to type with selected test content - THIS IS CRITICAL
+    setTextToType(test.text);
+    console.log('✍️ textToType updated to selected test content');
+    
+    // Update current test ID (critical for result saving)
+    setCurrentTestId(test.id);
+    
+    // Clear any existing user input and reset typing state
+    setUserInput("");
+    setCurrentIndex(0);
+    setErrors(0);
+    setStatus('waiting');
+    
+    // Reset time based on selected time (not test's recommended time for now)
+    setTimeLeft(selectedTime);
+    
+    console.log('✅ Test selection complete. Current textToType length:', test.text.length);
+    console.log('🚀 Ready to start typing the selected test.');
+  }, [selectedTime]);
 
   // Test lifecycle functions
   const endTest = useCallback(async () => {
@@ -420,6 +521,83 @@ export default function TestPage() {
                         ))}
                       </div>
                     </div>
+                    
+                    {/* Test Selection Section */}
+                    <div>
+                      <Label className="text-foreground text-lg mb-3 block">
+                        <Type className="inline mr-2 h-5 w-5" />
+                        Choose Test
+                      </Label>
+                      
+                      {testsLoading && (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          <span className="ml-3 text-muted-foreground">Loading tests...</span>
+                        </div>
+                      )}
+                      
+                      {testsError && (
+                        <div className="text-center py-8">
+                          <p className="text-destructive mb-4">❌ {testsError}</p>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => window.location.reload()}
+                            className="border-border text-foreground hover:bg-accent"
+                          >
+                            Try Again
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {!testsLoading && !testsError && preMadeTests.length === 0 && (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground mb-4">No tests available for the current filters.</p>
+                          <p className="text-sm text-muted-foreground">Try changing the difficulty or time settings.</p>
+                        </div>
+                      )}
+                      
+                      {!testsLoading && !testsError && preMadeTests.length > 0 && (
+                        <div className="grid gap-3 max-h-96 overflow-y-auto">
+                          {preMadeTests.map((test) => (
+                            <div
+                              key={test.id}
+                              className={`
+                                p-4 rounded-lg border cursor-pointer transition-all duration-200
+                                ${selectedTestId === test.id
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-border hover:border-primary/50 hover:bg-accent'
+                                }
+                              `}
+                              onClick={() => handleTestSelection(test)}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-foreground">{test.source}</span>
+                                  <span className={`
+                                    px-2 py-1 rounded text-xs font-medium
+                                    ${test.difficulty === 'Easy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                                      test.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                    }
+                                  `}>
+                                    {test.difficulty}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground">{test.wordCount} words</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {test.text.substring(0, 120)}...
+                              </p>
+                              {selectedTestId === test.id && (
+                                <div className="mt-2 text-sm text-primary font-medium">
+                                  ✓ Selected - Ready to start typing
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="ai" className="space-y-6">
@@ -486,9 +664,19 @@ export default function TestPage() {
               </Tabs>
               <Button
                 onClick={startTest}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xl py-6"
+                disabled={activeTab === 'practice' && !selectedTestId}
+                className={`
+                  w-full text-xl py-6
+                  ${activeTab === 'practice' && !selectedTestId
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                  }
+                `}
               >
-                Start Typing
+                {activeTab === 'practice' && !selectedTestId 
+                  ? 'Select a test to begin'
+                  : 'Start Typing'
+                }
               </Button>
             </GlassCard>
           </div>
