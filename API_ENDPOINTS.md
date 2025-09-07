@@ -212,6 +212,8 @@
 2. **Stats Calculation**: Updated `calculateUserStats` to query test results directly
 3. **Data Structure**: Ensured consistent data structure across all components
 4. **Error Handling**: Added proper validation and error handling for all data operations
+5. **Auto-Save Timer Fix**: Implemented ref-based endTest calls to prevent stale state issues
+6. **Timer Logic**: Fixed timer dependencies and race conditions for reliable auto-save
 
 ### Data Flow
 1. **Test Completion** → Test page calculates WPM, accuracy, errors
@@ -220,3 +222,10 @@
 4. **Firestore Storage** → Test result saved to `testResults` collection
 5. **Dashboard Update** → Dashboard queries test results and calculates stats
 6. **History Display** → History page shows paginated test results
+
+### Auto-Save Implementation
+- **Timer Completion**: When timer reaches 0, calls `endTest` via ref to ensure fresh state
+- **Manual Finish**: "Finish Test" button calls `endTest` directly with current state
+- **Consistent Behavior**: Both auto-save and manual finish use identical logic and data
+- **Validation**: All test data properly validated before submission (no more 400 errors)
+- **Single Submission**: Each test completion saves exactly once, no duplicates

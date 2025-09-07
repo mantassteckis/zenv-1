@@ -148,6 +148,103 @@ useEffect(() => {
 
 ---
 
+## 🚨 CRITICAL: Auto-Save Timer Completion Issues
+
+### **Problem Description**
+- **Date**: January 2025 session
+- **Severity**: Critical - Auto-save functionality completely broken
+- **Symptoms**:
+  - Timer completion not triggering auto-save
+  - 400 validation errors with invalid data (wpm: 0, accuracy: 0, userInput: '')
+  - Duplicate submissions when timer ends
+  - Auto-save using stale state values instead of current typing data
+  - Manual "Finish Test" button working perfectly, but auto-save failing
+
+### **Root Causes Identified**
+1. **Stale closure in timer** - Timer was calling `endTest()` with old state values
+2. **Dependency array issues** - Adding `endTest` to timer dependencies caused restarts
+3. **Race conditions** - Multiple calls to `endTest()` from different sources
+4. **Status check timing** - `endTest()` status check preventing execution when called from timer
+5. **Button click approach failed** - Programmatic button clicks had timing issues
+
+### **Solution Applied**
+**Key Principle**: Use ref-based function calls to avoid dependency issues while ensuring fresh state
+
+#### **1. Added endTestRef for Stable Function Reference**
+```typescript
+const endTestRef = useRef<() => Promise<void>>();
+
+// Update the ref whenever endTest changes
+useEffect(() => {
+  endTestRef.current = endTest;
+}, [endTest]);
+```
+
+#### **2. Fixed Timer Logic with Ref-Based Call**
+```typescript
+// Simple timer logic - starts when status is 'running', stops when not
+useEffect(() => {
+  if (status === 'running') {
+    intervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // Call endTest via ref when timer ends - this ensures proper state without dependency issues
+          if (endTestRef.current) {
+            endTestRef.current();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  } else {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }
+
+  return () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+}, [status]); // ← CRITICAL: Only depend on status, use ref for endTest
+```
+
+#### **3. Prevented Duplicate Calls with Status Check**
+```typescript
+const endTest = useCallback(async () => {
+  // Prevent multiple calls to endTest
+  if (status !== 'running') {
+    console.log('endTest called but status is not running, ignoring');
+    return;
+  }
+  
+  // Immediately set status to prevent race conditions
+  setStatus('finished');
+  // ... rest of endTest logic
+}, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId, status]);
+```
+
+### **Key Lessons Learned**
+1. **Use refs for function calls in timers** - Avoids dependency array issues
+2. **Status checks prevent race conditions** - Always check status before executing
+3. **Fresh state is critical** - Timer must use current state, not stale closures
+4. **Button click approach can fail** - Direct function calls via refs are more reliable
+5. **Timer dependencies must be minimal** - Only depend on what actually affects timer behavior
+
+### **Prevention Checklist**
+- [ ] Use refs for function calls in useEffect timers
+- [ ] Keep timer dependencies minimal (only status)
+- [ ] Add status checks to prevent duplicate calls
+- [ ] Test both manual and auto-save paths
+- [ ] Ensure fresh state values in timer callbacks
+- [ ] Avoid adding functions to timer dependency arrays
+
+---
+
 ## 🔧 Minor Issues & Fixes
 
 ### **Linter Error: GlassCard onClick**
