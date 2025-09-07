@@ -387,13 +387,26 @@ export default function TestPage() {
     }, 100);
   }, [aiTest, selectedTime, textToType, activeTab]);
 
+  // Add a ref to track if test is already being ended
+  const isEndingTestRef = useRef(false);
+
   // Test lifecycle functions
   const endTest = useCallback(async () => {
-    // Prevent multiple calls to endTest
+    // Prevent multiple calls to endTest with double protection
     if (status !== 'running') {
-      console.log('endTest called but status is not running, ignoring');
+      console.log('🛑 endTest called but status is not running, ignoring:', status);
       return;
     }
+
+    // Second layer of protection - check if already ending
+    if (isEndingTestRef.current) {
+      console.log('🛑 endTest already in progress, preventing duplicate call');
+      return;
+    }
+
+    // Set flag immediately to prevent concurrent calls
+    isEndingTestRef.current = true;
+    console.log('🏁 endTest started - setting flags to prevent duplicates');
     
     // Immediately set status to prevent race conditions
     setStatus('finished');
@@ -495,6 +508,10 @@ export default function TestPage() {
     } else {
       console.log('User not authenticated, not saving test result');
     }
+
+    // Reset the ending flag at the very end
+    isEndingTestRef.current = false;
+    console.log('✅ endTest completed - reset ending flag');
   }, [user, selectedTime, timeLeft, userInput, textToType, errors, selectedDifficulty, currentTestId, status]);
 
   // Update the ref whenever endTest changes
@@ -566,6 +583,10 @@ export default function TestPage() {
       activeTab,
       timestamp: new Date().toISOString()
     });
+    
+    // Reset the ending flag for new test (prevent issues from previous test)
+    isEndingTestRef.current = false;
+    console.log('🔄 Reset ending flag for new test');
     
     // CRITICAL CHECK: If we're in AI tab but still have dummy text, something is wrong
     if (activeTab === 'ai' && textToType.includes('The quick brown fox')) {

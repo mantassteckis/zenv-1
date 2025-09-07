@@ -88,19 +88,42 @@ Remember: Generate ONLY the typing test content as a single paragraph. Do not in
 */
 
 /**
- * Generates placeholder content for testing purposes
- * TODO: Replace with actual AI generation
+ * Generates varied, engaging content for typing practice
+ * Uses multiple templates to avoid repetitive content
+ * TODO: Replace with actual AI generation in future
  */
 function generatePlaceholderContent(topic: string, difficulty: string): string {
+  // Multiple varied templates for each difficulty to avoid repetition
   const templates = {
-    Easy: `Learning about ${topic} can be both fun and educational. This subject offers many opportunities to explore new concepts and develop useful skills. Whether you're just starting out or looking to refresh your knowledge, understanding the basics is always important. The fundamentals provide a solid foundation for more advanced learning. Practice and patience are key to mastering any new area of study. With time and effort, anyone can become proficient in topics that interest them. Remember that every expert was once a beginner who kept trying.`,
+    Easy: [
+      `Exploring ${topic} opens doors to fascinating discoveries and practical applications. Many people find this subject both accessible and rewarding to study. Basic concepts provide a strong foundation for deeper understanding, while hands-on experience helps reinforce theoretical knowledge. Whether you're pursuing personal interest or professional development, starting with fundamental principles ensures steady progress. Regular practice and curiosity drive meaningful learning in any field.`,
+      
+      `Understanding ${topic} becomes easier when you break it down into manageable parts. This subject offers countless opportunities for growth and skill development. Beginners often discover that patience and consistent effort lead to significant improvements over time. Key concepts build upon each other, creating a solid knowledge base. Success comes from combining theory with practical application and maintaining enthusiasm for continuous learning.`,
+      
+      `Getting started with ${topic} requires curiosity and dedication to learning new concepts. This field provides numerous pathways for exploration and personal growth. Important foundations include grasping basic terminology, understanding core principles, and practicing fundamental techniques. Students who approach this subject with an open mind often find unexpected connections to other areas of interest. Progress accelerates when theory meets real-world application.`,
+    ],
     
-    Medium: `The field of ${topic} encompasses a broad range of specialized concepts and methodologies that professionals use in their daily practice. Understanding the underlying principles requires careful study and practical application. Modern approaches to ${topic} often involve complex systems, advanced techniques, and industry-standard protocols that have evolved over time. Practitioners must stay current with emerging trends and technological developments while maintaining a solid grasp of fundamental concepts. This balance between traditional knowledge and innovative practices defines successful professional work in this domain.`,
+    Medium: [
+      `Professional ${topic} involves sophisticated techniques and established methodologies that industry experts utilize daily. Success in this domain requires balancing theoretical knowledge with practical experience, understanding both current best practices and emerging innovations. Skilled practitioners develop expertise through continuous learning, staying current with technological advances while maintaining proficiency in fundamental concepts. This field demands analytical thinking, problem-solving abilities, and adaptability to evolving industry standards.`,
+      
+      `Modern approaches to ${topic} integrate traditional methods with contemporary innovations, creating dynamic solutions for complex challenges. Practitioners must understand underlying principles while adapting to rapidly changing technologies and methodologies. Industry professionals emphasize the importance of systematic approaches, thorough analysis, and strategic implementation. Expertise develops through experience, collaboration, and commitment to staying current with evolving best practices and emerging trends.`,
+      
+      `Successful ${topic} implementation combines technical proficiency with strategic thinking and comprehensive understanding of industry standards. Professionals in this field navigate complex requirements while maintaining quality, efficiency, and innovation. Essential skills include analytical reasoning, systematic problem-solving, and effective communication. Career advancement depends on mastering core competencies while continuously expanding knowledge through professional development and practical application.`,
+    ],
     
-    Hard: `Advanced ${topic} implementation requires sophisticated understanding of complex theoretical frameworks, cutting-edge methodologies, and specialized technical expertise. Contemporary research in this field demonstrates intricate relationships between multiple variables, demanding comprehensive analytical capabilities and profound domain knowledge. Practitioners must navigate challenging paradigms, leverage state-of-the-art technologies, and synthesize multifaceted information from diverse sources. The convergence of traditional approaches with revolutionary innovations necessitates exceptional proficiency, strategic thinking, and adaptability to rapidly evolving industry standards and regulatory requirements.`
+    Hard: [
+      `Advanced ${topic} mastery demands extensive expertise in complex theoretical frameworks, cutting-edge methodologies, and sophisticated analytical techniques. Leading practitioners synthesize multidisciplinary knowledge, leveraging state-of-the-art technologies while navigating intricate regulatory landscapes and evolving industry paradigms. Excellence requires strategic vision, exceptional technical proficiency, and adaptive leadership capabilities to address unprecedented challenges and drive innovative solutions in rapidly transforming professional environments.`,
+      
+      `Expert-level ${topic} encompasses sophisticated analytical frameworks, advanced technological implementations, and comprehensive strategic methodologies. Senior professionals demonstrate mastery through innovative problem-solving, complex system integration, and leadership in emerging technical domains. Success requires deep theoretical understanding, extensive practical experience, and exceptional analytical capabilities to navigate challenging professional scenarios while maintaining excellence across diverse technical and strategic dimensions.`,
+      
+      `Cutting-edge ${topic} applications involve sophisticated technical architectures, advanced analytical methodologies, and complex strategic implementations. Distinguished experts demonstrate exceptional proficiency through innovative approaches, comprehensive system design, and strategic leadership in challenging professional contexts. Mastery encompasses theoretical depth, practical expertise, and visionary thinking necessary to address complex challenges while driving technological advancement and organizational transformation in dynamic professional environments.`,
+    ]
   };
 
-  return templates[difficulty as keyof typeof templates] || templates.Medium;
+  // Randomly select from available templates for variety
+  const difficultyTemplates = templates[difficulty as keyof typeof templates] || templates.Medium;
+  const randomIndex = Math.floor(Math.random() * difficultyTemplates.length);
+  return difficultyTemplates[randomIndex];
 }
 
 /**
