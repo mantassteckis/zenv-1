@@ -88,8 +88,9 @@ export default function TestPage() {
           queryParams.append('difficulty', selectedDifficulty);
         }
         
-        // Note: We no longer filter by timeLimit since tests are now wordCount-based
-        // Users can select their preferred time duration independently of test content
+        if (selectedTime) {
+          queryParams.append('timeLimit', selectedTime.toString());
+        }
 
         console.log(`🔍 Fetching tests with params: ${queryParams.toString()}`);
         
@@ -118,7 +119,7 @@ export default function TestPage() {
     };
 
     fetchTests();
-  }, [selectedDifficulty, activeTab]); // Removed selectedTime since tests are now wordCount-based
+  }, [selectedDifficulty, selectedTime, activeTab]); // Now filtering by both difficulty and time
 
   // Handle tab switching logic
   useEffect(() => {
@@ -583,7 +584,11 @@ export default function TestPage() {
                                     {test.difficulty}
                                   </span>
                                 </div>
-                                <span className="text-sm text-muted-foreground">{test.wordCount} words</span>
+                                <div className="text-sm text-muted-foreground">
+                                  <span>{test.wordCount} words</span>
+                                  <span className="mx-2">•</span>
+                                  <span>{test.timeLimit < 60 ? `${test.timeLimit}s` : `${test.timeLimit / 60}m`}</span>
+                                </div>
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2">
                                 {test.text.substring(0, 120)}...

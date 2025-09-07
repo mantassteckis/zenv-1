@@ -36,9 +36,10 @@ export interface PreMadeTest {
   id: string;
   text: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  category: string; // e.g., 'basic_typing', 'general_practice', 'technical_typing'
-  source: string; // e.g., 'Technology', 'Nature', 'History', 'Practice'
-  wordCount: number; // Number of words in the test
+  category: string; // e.g., 'technology', 'customer_support', 'business_finance'
+  source: string; // e.g., 'Technology', 'Customer Support - VPN', 'Business & Finance'
+  wordCount: number; // Number of words in the test (50, 100, 200, 500)
+  timeLimit: number; // Recommended time in seconds (30, 60, 120, 300)
   createdAt: string; // ISO string timestamp
 }
 

@@ -49,6 +49,13 @@ export async function GET(request: NextRequest) {
       console.log(`🎯 Filtering by difficulty: ${difficulty}`);
     }
 
+    // Add time limit filter if provided (convert seconds to match database)
+    if (timeLimit) {
+      const timeLimitSeconds = parseInt(timeLimit);
+      constraints.push(where('timeLimit', '==', timeLimitSeconds));
+      console.log(`⏱️ Filtering by timeLimit: ${timeLimitSeconds} seconds`);
+    }
+
     // Add category filter if provided
     if (category) {
       constraints.push(where('category', '==', category));
@@ -75,6 +82,7 @@ export async function GET(request: NextRequest) {
         category: data.category || 'general_practice',
         source: data.source || 'Practice',
         wordCount: data.wordCount || 0,
+        timeLimit: data.timeLimit || 60,
         createdAt: data.createdAt || new Date().toISOString(),
       };
       
