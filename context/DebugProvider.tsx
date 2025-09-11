@@ -40,16 +40,24 @@ interface DebugProviderProps {
 export function DebugProvider({ children }: DebugProviderProps) {
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
   const [logs, setLogs] = useState<DebugLogEntry[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
   const sessionId = useRef(generateSessionId());
   const logIdCounter = useRef(0);
 
-  // Load debug state from localStorage
+  // Handle client-side mounting
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Load debug state from localStorage (only after mount)
+  useEffect(() => {
+    if (!isMounted) return;
+    
     const savedDebugState = localStorage.getItem('zentype-debug-enabled');
     if (savedDebugState === 'true') {
       setIsDebugEnabled(true);
     }
-  }, []);
+  }, [isMounted]);
 
   // Generate unique session ID
   function generateSessionId(): string {
@@ -60,7 +68,9 @@ export function DebugProvider({ children }: DebugProviderProps) {
   const toggleDebug = useCallback(() => {
     setIsDebugEnabled(prev => {
       const newState = !prev;
-      localStorage.setItem('zentype-debug-enabled', newState.toString());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zentype-debug-enabled', newState.toString());
+      }
       
       // Clear logs when disabling debug mode
       if (!newState) {

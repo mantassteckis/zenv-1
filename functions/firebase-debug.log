@@ -1,0 +1,94 @@
+[debug] [2025-09-11T03:33:22.816Z] ----------------------------------------------------------------------
+[debug] [2025-09-11T03:33:22.819Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Lemon Squid\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start --only functions
+[debug] [2025-09-11T03:33:22.819Z] CLI Version:   14.15.2
+[debug] [2025-09-11T03:33:22.819Z] Platform:      win32
+[debug] [2025-09-11T03:33:22.819Z] Node Version:  v22.18.0
+[debug] [2025-09-11T03:33:22.819Z] Time:          Thu Sep 11 2025 06:33:22 GMT+0300 (Eastern European Summer Time)
+[debug] [2025-09-11T03:33:22.820Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-11T03:33:23.035Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-09-11T03:33:23.036Z] > authorizing via signed-in user (sugurugetojjk5@gmail.com)
+[info] i  emulators: Starting emulators: functions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions"}}
+[debug] [2025-09-11T03:33:23.044Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-09-11T03:33:23.045Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-09-11T03:33:23.049Z] [hub] writing locator at C:\Users\LEMONS~1\AppData\Local\Temp\hub-solotype-23c1f.json
+[debug] [2025-09-11T03:33:23.064Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-09-11T03:33:23.065Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-09-11T03:33:23.065Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-09-11T03:33:23.065Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] !  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2025-09-11T03:33:23.078Z] defaultcredentials: writing to file C:\Users\Lemon Squid\AppData\Roaming\firebase\sugurugetojjk5_gmail_com_application_default_credentials.json
+[debug] [2025-09-11T03:33:23.080Z] Setting GAC to C:\Users\Lemon Squid\AppData\Roaming\firebase\sugurugetojjk5_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\Lemon Squid\\AppData\\Roaming\\firebase\\sugurugetojjk5_gmail_com_application_default_credentials.json"}}
+[debug] [2025-09-11T03:33:23.080Z] Checked if tokens are valid: true, expires at: 1757563901085
+[debug] [2025-09-11T03:33:23.080Z] Checked if tokens are valid: true, expires at: 1757563901085
+[debug] [2025-09-11T03:33:23.081Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/solotype-23c1f/adminSdkConfig [none]
+[debug] [2025-09-11T03:33:23.369Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/solotype-23c1f/adminSdkConfig 200
+[debug] [2025-09-11T03:33:23.369Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/solotype-23c1f/adminSdkConfig {"projectId":"solotype-23c1f","storageBucket":"solotype-23c1f.firebasestorage.app"}
+[info] i  functions: Watching "C:\Users\Lemon Squid\Documents\Jayy\zenv\functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"C:\\Users\\Lemon Squid\\Documents\\Jayy\\zenv\\functions\" for Cloud Functions..."}}
+[debug] [2025-09-11T03:33:24.425Z] Validating nodejs source
+[debug] [2025-09-11T03:33:25.311Z] > [functions] package.json contents: {
+  "name": "functions",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "@genkit-ai/ai": "^0.9.0",
+    "@genkit-ai/firebase": "^0.9.0",
+    "@genkit-ai/googleai": "^0.9.0",
+    "@google-cloud/functions-framework": "^4.0.0",
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.2",
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0",
+    "typescript": "^5.7.3"
+  },
+  "private": true
+}
+[debug] [2025-09-11T03:33:25.311Z] Building nodejs source
+[debug] [2025-09-11T03:33:25.312Z] Failed to find version of module node: reached end of search path C:\Users\Lemon Squid\Documents\Jayy\zenv\functions\node_modules
+[info] +  functions: Using node@22 from host. 
+[info] i  functions: Loaded environment variables from .env. 
+[debug] [2025-09-11T03:33:25.315Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-09-11T03:33:25.321Z] Found firebase-functions binary at 'C:\Users\Lemon Squid\Documents\Jayy\zenv\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8059
+
+[info] [dotenv@17.2.2] injecting env (1) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+
+[info] Environment variables loaded from: C:\Users\Lemon Squid\Documents\Jayy\zenv\functions\.env
+GEMINI_API_KEY loaded successfully
+
+[debug] [2025-09-11T03:33:26.208Z] Got response from /__/functions.yaml {"endpoints":{"submitTestResult":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"submitTestResult"},"generateAiTest":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":10,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"generateAiTest"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] +  functions: Loaded functions definitions from source: submitTestResult, generateAiTest. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: submitTestResult, generateAiTest."}}
+[info] +  functions[us-central1-submitTestResult]: http function initialized (http://127.0.0.1:5001/solotype-23c1f/us-central1/submitTestResult). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/solotype-23c1f/us-central1/submitTestResult)."}}
+[info] +  functions[us-central1-generateAiTest]: http function initialized (http://127.0.0.1:5001/solotype-23c1f/us-central1/generateAiTest). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/solotype-23c1f/us-central1/generateAiTest)."}}
+[debug] [2025-09-11T03:33:30.245Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌───────────┬────────────────┬─────────────────────────────────┐
+│ Emulator  │ Host:Port      │ View in Emulator UI             │
+├───────────┼────────────────┼─────────────────────────────────┤
+│ Functions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions │
+└───────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 

@@ -1,18 +1,13 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import { UserProfile } from '../types/database';
+import * as logger from "firebase-functions/logger";
+import { GEMINI_API_KEY } from './config';
 
 // Initialize the Google Generative AI with API key
 const getGeminiClient = () => {
-  // For client-side usage, we need to use NEXT_PUBLIC_ prefix
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    console.error('Gemini API Key not found in environment variables');
+  if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not defined in environment variables');
   }
-  
-  console.log('Initializing Gemini client with API key length:', apiKey.length);
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenerativeAI(GEMINI_API_KEY);
 };
 
 /**
@@ -54,44 +49,47 @@ DIFFICULTY LEVEL: EASY
 - Focus on common words and basic concepts
 - Minimize technical jargon and complex terminology
 - Keep sentences shorter and more direct
-- Use everyday language accessible to most readers`;
+- Target a general audience with no specialized knowledge`;
       break;
+    
     case 'Medium':
       difficultyInstructions = `
 
 DIFFICULTY LEVEL: MEDIUM
-- Use moderate vocabulary with some professional terminology
-- Include occasional complex sentence structures
-- Incorporate some field-specific terminology and concepts
+- Use moderate vocabulary with some specialized terms
+- Include a mix of simple and complex sentence structures
+- Incorporate some industry-specific terminology
 - Balance between accessibility and professional language
-- Present moderately complex ideas and relationships`;
+- Target an audience with basic familiarity of the subject`;
       break;
+    
     case 'Hard':
       difficultyInstructions = `
 
 DIFFICULTY LEVEL: HARD
-- Use sophisticated vocabulary and complex sentence structures
-- Include advanced professional terminology and specialized jargon
-- Incorporate technical concepts and detailed explanations
-- Use varied punctuation and challenging word patterns
-- Present complex ideas with precise, domain-specific language`;
+- Use advanced vocabulary and professional terminology
+- Include complex sentence structures with varied punctuation
+- Incorporate specialized jargon and technical concepts
+- Present nuanced ideas and sophisticated reasoning
+- Target an audience with professional knowledge of the subject`;
       break;
+    
     default:
       difficultyInstructions = `
 
 DIFFICULTY LEVEL: MEDIUM
-- Use moderate vocabulary with some professional terminology
-- Include occasional complex sentence structures
-- Incorporate some field-specific terminology and concepts
+- Use moderate vocabulary with some specialized terms
+- Include a mix of simple and complex sentence structures
+- Incorporate some industry-specific terminology
 - Balance between accessibility and professional language
-- Present moderately complex ideas and relationships`;
+- Target an audience with basic familiarity of the subject`;
   }
-
+  
   return basePrompt + difficultyInstructions;
 };
 
 /**
- * Generates typing test content using Gemini 2.5 Pro Flash API
+ * Generates typing test content using Gemini AI
  * @param topic The topic for the typing test
  * @param difficulty The difficulty level (Easy, Medium, Hard)
  * @param timeLimit The time limit in seconds (30, 60, 120, 300)
@@ -104,17 +102,33 @@ export const generateTypingText = async (
   userInterests: string[] = []
 ): Promise<string> => {
   try {
+    logger.debug("🔍 DEBUG: Initializing Gemini client", {
+      apiKeyExists: !!GEMINI_API_KEY,
+      apiKeyLength: GEMINI_API_KEY?.length || 0,
+      topic,
+      difficulty,
+      timeLimit,
+      userInterests: userInterests.length > 0 ? userInterests : 'none'
+    });
+    
     const genAI = getGeminiClient();
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     
     const prompt = buildSystemPrompt(difficulty, timeLimit);
     
-    // Prepare user interests context if available
-    let userInterestsContext = '';
-    if (userInterests && userInterests.length > 0) {
-      userInterestsContext = `\n\nUSER INTERESTS: ${userInterests.join(', ')}\n\nConsider incorporating elements related to these interests if they can naturally connect with the main topic.`;
-    }
+    logger.debug("🔍 DEBUG: Sending request to Gemini", {
+      promptLength: prompt.length,
+      topic,
+      difficulty,
+      timeLimit,
+      userInterests: userInterests.length > 0 ? userInterests : 'none'
+    });
     
+    // Prepare user interests context if available
+    const userInterestsContext = userInterests && userInterests.length > 0 
+      ? `\n\nUSER INTERESTS: ${userInterests.join(', ')}\n\nIf possible, relate the content to these interests while staying on topic.` 
+      : '';
+
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: `${prompt}\n\nTOPIC: ${topic}${userInterestsContext}\n\nGenerate a typing test about this topic:` }] }],
       generationConfig: {
@@ -146,30 +160,15 @@ export const generateTypingText = async (
     const response = result.response;
     const text = response.text();
     
+    logger.debug("✅ DEBUG: Received response from Gemini", {
+      responseLength: text.length,
+      responsePreview: text.substring(0, 50) + '...'
+    });
+    
     // Clean up any potential formatting issues
     return text.trim().replace(/\n+/g, ' ').replace(/\s+/g, ' ');
   } catch (error) {
-    console.error('Error generating typing text with Gemini:', error);
+    logger.error("🚨 DEBUG: Error generating typing text with Gemini:", error);
     throw new Error(`Failed to generate typing text: ${error instanceof Error ? error.message : String(error)}`);
   }
-};
-
-/**
- * Analyzes typing performance and provides feedback
- * @param testResults The results of a typing test
- * @returns Analysis and feedback for the user
- */
-export const analyzeTypingPerformance = async (testResults: any): Promise<string> => {
-  // TODO: Implement performance analysis with Gemini
-  return 'Performance analysis feature coming soon!';
-};
-
-/**
- * Generates personalized content based on user profile
- * @param userProfile The user's profile data
- * @returns Personalized typing content
- */
-export const generatePersonalizedContent = async (userProfile: UserProfile): Promise<string> => {
-  // TODO: Implement personalized content generation
-  return 'Personalized content feature coming soon!';
 };

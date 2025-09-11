@@ -1,0 +1,170 @@
+{
+  "sessionId": "debug_1757465425290_wbtmginxw",
+  "exportedAt": "2025-09-10T00:53:43.392Z",
+  "debugEnabled": true,
+  "totalLogs": 10,
+  "logs": [
+    {
+      "id": "log_0",
+      "timestamp": 1757465506562,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Starting AI test generation process",
+      "data": {
+        "hasUser": true,
+        "topic": "call of duty",
+        "userInterests": [],
+        "selectedDifficulty": "Easy",
+        "selectedTime": 60
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_1",
+      "timestamp": 1757465506562,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Input validation passed, starting generation",
+      "data": {
+        "userId": "8KXxSzoKw7RObh6oVRAu4oGTm2R2",
+        "topicLength": 12,
+        "userInterests": [],
+        "difficulty": "Easy",
+        "timeLimit": 60
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_2",
+      "timestamp": 1757465506562,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Retrieved user preferences",
+      "data": {
+        "userId": "8KXxSzoKw7RObh6oVRAu4oGTm2R2",
+        "autoSaveAiTests": false,
+        "hasProfile": false,
+        "hasSettings": false,
+        "userInterests": []
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_3",
+      "timestamp": 1757465506562,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Preparing to call Cloud Function",
+      "data": {
+        "requestData": {
+          "topic": "call of duty",
+          "difficulty": "Easy",
+          "timeLimit": 60,
+          "saveTest": false,
+          "userInterests": []
+        }
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_4",
+      "timestamp": 1757465506563,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Calling Cloud Function",
+      "data": {
+        "topic": "call of duty",
+        "difficulty": "Easy",
+        "timeLimit": 60,
+        "userInterests": []
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_5",
+      "timestamp": 1757465510394,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Cloud Function response received",
+      "data": {
+        "success": true,
+        "textLength": 636,
+        "wordCount": 101,
+        "testId": "unknown"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_6",
+      "timestamp": 1757465510394,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "Processing generated text",
+      "data": {
+        "dataType": "object",
+        "dataKeys": [
+          "success",
+          "text",
+          "testId",
+          "wordCount",
+          "saved",
+          "userInterestsIncluded",
+          "message"
+        ],
+        "hasText": true,
+        "textLength": 636,
+        "hasTestId": false,
+        "success": true
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_7",
+      "timestamp": 1757465510394,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "Generated test object created",
+      "data": {
+        "testId": "ai_1757465510394",
+        "textLength": 636,
+        "wordCount": 101,
+        "saved": false,
+        "category": "ai_generated"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_8",
+      "timestamp": 1757465510394,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "AI test generation completed successfully",
+      "data": {
+        "testReady": true,
+        "testId": "ai_1757465510394"
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    },
+    {
+      "id": "log_9",
+      "timestamp": 1757465510394,
+      "level": "debug",
+      "category": "AI_GENERATION",
+      "message": "AI generation process ended",
+      "data": {
+        "isGenerating": false
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1757465425290_wbtmginxw"
+    }
+  ]
+}

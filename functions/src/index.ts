@@ -3,6 +3,8 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
+// Import config to load environment variables
+import './config';
 // Initialize Firebase Admin
 initializeApp();
 const db = getFirestore();
@@ -28,6 +30,8 @@ interface AiTestRequestData {
   topic: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   saveTest: boolean;
+  timeLimit?: number; // Optional time limit in seconds (30, 60, 120, 300)
+  userInterests?: string[]; // Optional user interests to personalize content
 }
 
 /**
@@ -88,42 +92,12 @@ Remember: Generate ONLY the typing test content as a single paragraph. Do not in
 */
 
 /**
- * Generates varied, engaging content for typing practice
- * Uses multiple templates to avoid repetitive content
- * TODO: Replace with actual AI generation in future
+ * This function has been replaced by the Gemini AI implementation in genkit_functions.ts
+ * Keeping this as a fallback in case the AI service is unavailable
  */
 function generatePlaceholderContent(topic: string, difficulty: string): string {
-  // Multiple varied templates for each difficulty to avoid repetition
-  const templates = {
-    Easy: [
-      `Exploring ${topic} opens doors to fascinating discoveries and practical applications. Many people find this subject both accessible and rewarding to study. Basic concepts provide a strong foundation for deeper understanding, while hands-on experience helps reinforce theoretical knowledge. Whether you're pursuing personal interest or professional development, starting with fundamental principles ensures steady progress. Regular practice and curiosity drive meaningful learning in any field.`,
-      
-      `Understanding ${topic} becomes easier when you break it down into manageable parts. This subject offers countless opportunities for growth and skill development. Beginners often discover that patience and consistent effort lead to significant improvements over time. Key concepts build upon each other, creating a solid knowledge base. Success comes from combining theory with practical application and maintaining enthusiasm for continuous learning.`,
-      
-      `Getting started with ${topic} requires curiosity and dedication to learning new concepts. This field provides numerous pathways for exploration and personal growth. Important foundations include grasping basic terminology, understanding core principles, and practicing fundamental techniques. Students who approach this subject with an open mind often find unexpected connections to other areas of interest. Progress accelerates when theory meets real-world application.`,
-    ],
-    
-    Medium: [
-      `Professional ${topic} involves sophisticated techniques and established methodologies that industry experts utilize daily. Success in this domain requires balancing theoretical knowledge with practical experience, understanding both current best practices and emerging innovations. Skilled practitioners develop expertise through continuous learning, staying current with technological advances while maintaining proficiency in fundamental concepts. This field demands analytical thinking, problem-solving abilities, and adaptability to evolving industry standards.`,
-      
-      `Modern approaches to ${topic} integrate traditional methods with contemporary innovations, creating dynamic solutions for complex challenges. Practitioners must understand underlying principles while adapting to rapidly changing technologies and methodologies. Industry professionals emphasize the importance of systematic approaches, thorough analysis, and strategic implementation. Expertise develops through experience, collaboration, and commitment to staying current with evolving best practices and emerging trends.`,
-      
-      `Successful ${topic} implementation combines technical proficiency with strategic thinking and comprehensive understanding of industry standards. Professionals in this field navigate complex requirements while maintaining quality, efficiency, and innovation. Essential skills include analytical reasoning, systematic problem-solving, and effective communication. Career advancement depends on mastering core competencies while continuously expanding knowledge through professional development and practical application.`,
-    ],
-    
-    Hard: [
-      `Advanced ${topic} mastery demands extensive expertise in complex theoretical frameworks, cutting-edge methodologies, and sophisticated analytical techniques. Leading practitioners synthesize multidisciplinary knowledge, leveraging state-of-the-art technologies while navigating intricate regulatory landscapes and evolving industry paradigms. Excellence requires strategic vision, exceptional technical proficiency, and adaptive leadership capabilities to address unprecedented challenges and drive innovative solutions in rapidly transforming professional environments.`,
-      
-      `Expert-level ${topic} encompasses sophisticated analytical frameworks, advanced technological implementations, and comprehensive strategic methodologies. Senior professionals demonstrate mastery through innovative problem-solving, complex system integration, and leadership in emerging technical domains. Success requires deep theoretical understanding, extensive practical experience, and exceptional analytical capabilities to navigate challenging professional scenarios while maintaining excellence across diverse technical and strategic dimensions.`,
-      
-      `Cutting-edge ${topic} applications involve sophisticated technical architectures, advanced analytical methodologies, and complex strategic implementations. Distinguished experts demonstrate exceptional proficiency through innovative approaches, comprehensive system design, and strategic leadership in challenging professional contexts. Mastery encompasses theoretical depth, practical expertise, and visionary thinking necessary to address complex challenges while driving technological advancement and organizational transformation in dynamic professional environments.`,
-    ]
-  };
-
-  // Randomly select from available templates for variety
-  const difficultyTemplates = templates[difficulty as keyof typeof templates] || templates.Medium;
-  const randomIndex = Math.floor(Math.random() * difficultyTemplates.length);
-  return difficultyTemplates[randomIndex];
+  // Return a simple message indicating AI is being used
+  return `This is a fallback message. The Gemini AI service should be generating content about ${topic} at ${difficulty} difficulty level. If you're seeing this message, there might be an issue with the AI service or API key configuration.`;
 }
 
 /**
@@ -135,7 +109,11 @@ export const submitTestResult = onCall({
     "http://localhost:3000",
     "https://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://127.0.0.1:3000"
+    "https://127.0.0.1:3000",
+    "http://localhost:3001",
+    "https://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://127.0.0.1:3001"
   ]
 }, async (request) => {
   // Authentication Guard
@@ -299,7 +277,11 @@ export const generateAiTest = onCall({
     "http://localhost:3000",
     "https://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://127.0.0.1:3000"
+    "https://127.0.0.1:3000",
+    "http://localhost:3001",
+    "https://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://127.0.0.1:3001"
   ]
 }, async (request) => {
   // Enhanced debug logging for Cloud Function entry
@@ -334,7 +316,8 @@ export const generateAiTest = onCall({
     dataType: typeof requestData,
     dataKeys: requestData ? Object.keys(requestData) : [],
     rawData: requestData,
-    dataSize: JSON.stringify(requestData || {}).length
+    dataSize: JSON.stringify(requestData || {}).length,
+    userInterests: requestData?.userInterests || 'none'
   });
 
   if (!requestData) {
@@ -431,17 +414,68 @@ export const generateAiTest = onCall({
       step: "GENERATION_START"
     });
 
-    // Generate content using AI (placeholder implementation)
-    logger.debug("🔍 DEBUG: Calling placeholder content generator", {
+    // Generate content using Gemini AI
+    logger.debug("🔍 DEBUG: Calling Gemini AI content generator", {
       userId,
       topic: requestData.topic.trim(),
       difficulty: requestData.difficulty,
       step: "CALLING_GENERATOR"
     });
 
-    const generatedText = generatePlaceholderContent(requestData.topic, requestData.difficulty);
+    // Import the generateTypingText function from our genkit_functions
+    const { generateTypingText } = require("./genkit_functions");
     
-    logger.debug("✅ DEBUG: Placeholder content generated", {
+    // Calculate time limit based on difficulty
+    let timeLimit = 60; // Default to 1 minute
+    if (requestData.timeLimit) {
+      timeLimit = requestData.timeLimit;
+    } else {
+      // If timeLimit not provided, estimate based on difficulty
+      switch(requestData.difficulty) {
+        case "Easy": timeLimit = 30; break;
+        case "Medium": timeLimit = 60; break;
+        case "Hard": timeLimit = 120; break;
+        default: timeLimit = 60;
+      }
+    }
+    
+    let generatedText;
+    try {
+      // Try to generate text using Gemini AI
+      logger.debug("🔍 DEBUG: Attempting to use Gemini AI", {
+        userId,
+        topic: requestData.topic.trim(),
+        difficulty: requestData.difficulty,
+        timeLimit,
+        step: "GEMINI_ATTEMPT"
+      });
+      
+      generatedText = await generateTypingText(
+        requestData.topic.trim(),
+        requestData.difficulty,
+        timeLimit,
+        requestData.userInterests || []
+      );
+      
+      logger.info("✅ DEBUG: Successfully used Gemini AI", {
+        userId,
+        step: "GEMINI_SUCCESS",
+        userInterestsIncluded: (requestData.userInterests && requestData.userInterests.length > 0) || false,
+        userInterestsCount: requestData.userInterests?.length || 0
+      });
+    } catch (error) {
+      // Fall back to placeholder content if Gemini fails
+      logger.error("🚨 DEBUG: Gemini AI failed, falling back to placeholder", {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        step: "GEMINI_FAILED_FALLBACK"
+      });
+      
+      generatedText = generatePlaceholderContent(requestData.topic, requestData.difficulty);
+    }
+    
+    logger.debug("✅ DEBUG: Gemini AI content generated", {
       userId,
       hasGeneratedText: !!generatedText,
       textLength: generatedText?.length || 0,
@@ -466,7 +500,8 @@ export const generateAiTest = onCall({
       textLength: generatedText.length,
       wordCount: wordCount,
       firstWords: generatedText.substring(0, 50) + '...',
-      step: "PROCESSING_COMPLETE"
+      step: "PROCESSING_COMPLETE",
+      userInterestsIncluded: (requestData.userInterests && requestData.userInterests.length > 0) || false
     });
 
     let savedTestId: string | null = null;
@@ -492,12 +527,15 @@ export const generateAiTest = onCall({
           generatedByAi: true,
           topic: requestData.topic.trim(),
           userId: userId, // Track who created this test
+          userInterests: requestData.userInterests || [], // Store user interests used for generation
         };
 
         logger.debug("🔍 DEBUG: Firestore document prepared", {
           userId,
           documentKeys: Object.keys(aiTestData),
           documentSize: JSON.stringify(aiTestData).length,
+          userInterestsIncluded: (requestData.userInterests && requestData.userInterests.length > 0) || false,
+          userInterestsCount: requestData.userInterests?.length || 0,
           step: "DOCUMENT_PREPARED"
         });
 
@@ -547,6 +585,7 @@ export const generateAiTest = onCall({
       testId: savedTestId,
       wordCount: wordCount,
       saved: requestData.saveTest && savedTestId !== null,
+      userInterestsIncluded: (requestData.userInterests && requestData.userInterests.length > 0) || false,
       message: "AI test generated successfully" 
     };
 

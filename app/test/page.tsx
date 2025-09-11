@@ -25,7 +25,7 @@ interface TypingCustomization {
 
 export default function TestPage() {
   // Auth and user data
-  const { user } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   
   // Debug logging
   const debugLogger = useDebugLogger();
@@ -40,6 +40,10 @@ export default function TestPage() {
   const [userInput, setUserInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [errors, setErrors] = useState(0);
+  
+  // Final test results state
+  const [finalWpm, setFinalWpm] = useState(0);
+  const [finalAccuracy, setFinalAccuracy] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,8 +70,18 @@ export default function TestPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiTest, setAiTest] = useState<any>(null); // Generated test object
 
-  // Load saved preferences
+  // Client-side mount state to prevent hydration issues
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle client-side mounting
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Load saved preferences (only after mount)
+  useEffect(() => {
+    if (!isMounted) return;
+    
     const savedTheme = localStorage.getItem("zenTypeTheme");
     const savedFont = localStorage.getItem("zenTypeFont");
 
@@ -77,7 +91,7 @@ export default function TestPage() {
     if (savedFont) {
       setTypingCustomization((prev) => ({ ...prev, font: savedFont }));
     }
-  }, []);
+  }, [isMounted]);
 
   // Fetch pre-made tests from API
   useEffect(() => {
@@ -138,13 +152,28 @@ export default function TestPage() {
       setSelectedTestId(null);
     }
     
-    // Clear text when switching to AI tab - AI tests will set their own content
-    if (activeTab === 'ai' && selectedTestId) {
-      console.log('🤖 Switching to AI tab - clearing practice test selection');
-      setTextToType("");
-      setCurrentTestId(null);
+    // Handle AI tab switching - restore AI test content if available
+    if (activeTab === 'ai') {
+      if (selectedTestId) {
+        console.log('🤖 Switching to AI tab - clearing practice test selection');
+        setSelectedTestId(null);
+      }
+      
+      // Restore AI test content if we have one
+      if (aiTest && aiTest.text) {
+        console.log('🔄 Restoring AI test content on tab switch', {
+          aiTestId: aiTest.id,
+          textLength: aiTest.text.length
+        });
+        setTextToType(aiTest.text);
+        setCurrentTestId(aiTest.id);
+      } else {
+        // Clear content if no AI test available
+        setTextToType("");
+        setCurrentTestId(null);
+      }
     }
-  }, [activeTab, selectedTestId]);
+  }, [activeTab, selectedTestId, aiTest]);
 
   // Test selection handler
   const handleTestSelection = useCallback((test: PreMadeTest) => {
@@ -179,6 +208,7 @@ export default function TestPage() {
     debugLogger.info('AI_GENERATION', 'Starting AI test generation process', {
       hasUser: !!user,
       topic: topic.trim(),
+      userInterests: profile?.interests || [],
       selectedDifficulty,
       selectedTime
     }, 'app/test/page.tsx:handleGenerateAiTest');
@@ -198,6 +228,7 @@ export default function TestPage() {
     debugLogger.info('AI_GENERATION', 'Input validation passed, starting generation', {
       userId: user.uid,
       topicLength: topic.trim().length,
+      userInterests: profile?.interests || [],
       difficulty: selectedDifficulty,
       timeLimit: selectedTime
     }, 'app/test/page.tsx:handleGenerateAiTest');
@@ -207,61 +238,65 @@ export default function TestPage() {
 
     try {
       // Get user's autoSaveAiTests preference (default to false)
-      const autoSaveAiTests = user.profile?.settings?.autoSaveAiTests || false;
+      const autoSaveAiTests = profile?.settings?.autoSaveAiTests || false;
       
       debugLogger.info('AI_GENERATION', 'Retrieved user preferences', {
         userId: user.uid,
         autoSaveAiTests,
-        hasProfile: !!user.profile,
-        hasSettings: !!user.profile?.settings
+        hasProfile: !!profile,
+        hasSettings: !!profile?.settings,
+        userInterests: profile?.interests || []
       }, 'app/test/page.tsx:handleGenerateAiTest');
 
       // Prepare request data
       const requestData = {
         topic: topic.trim(),
         difficulty: selectedDifficulty,
-        saveTest: autoSaveAiTests
+        timeLimit: selectedTime,
+        saveTest: autoSaveAiTests,
+        userInterests: profile?.interests || []
       };
 
-      debugLogger.info('AI_GENERATION', 'Preparing Cloud Function call', {
-        requestData,
-        functionsExists: !!functions
+      debugLogger.info('AI_GENERATION', 'Preparing to call Cloud Function', {
+        requestData
       }, 'app/test/page.tsx:handleGenerateAiTest');
 
-      // Call generateAiTest Cloud Function
-      const generateAiTestFn = httpsCallable(functions, 'generateAiTest');
+      // Call the Cloud Function
+      const generateAiTest = httpsCallable(functions, 'generateAiTest');
       
-      debugLogger.debug('AI_GENERATION', 'Calling generateAiTest Cloud Function', {
-        functionName: 'generateAiTest',
-        requestDataSize: JSON.stringify(requestData).length
+      debugLogger.debug('AI_GENERATION', 'Calling Cloud Function', {
+        topic: requestData.topic,
+        difficulty: requestData.difficulty,
+        timeLimit: requestData.timeLimit,
+        userInterests: requestData.userInterests
       }, 'app/test/page.tsx:handleGenerateAiTest');
 
-      const result = await generateAiTestFn(requestData);
-
-      debugLogger.info('AI_GENERATION', 'Cloud Function call completed', {
-        hasResult: !!result,
-        hasData: !!result.data,
-        resultKeys: result ? Object.keys(result) : []
-      }, 'app/test/page.tsx:handleGenerateAiTest');
-
+      // Call the Cloud Function
+      const result = await generateAiTest(requestData);
       const data = result.data as any;
+
+      debugLogger.info('AI_GENERATION', 'Cloud Function response received', {
+        success: data?.success,
+        textLength: data?.text?.length || 0,
+        wordCount: data?.wordCount || 0,
+        testId: data?.testId || 'unknown'
+      }, 'app/test/page.tsx:handleGenerateAiTest');
       
-      debugLogger.debug('AI_GENERATION', 'Processing Cloud Function response', {
+      debugLogger.debug('AI_GENERATION', 'Processing generated text', {
         dataType: typeof data,
-        dataKeys: data ? Object.keys(data) : [],
+        dataKeys: Object.keys(data),
         hasText: !!(data?.text),
         textLength: data?.text?.length || 0,
         hasTestId: !!(data?.testId),
         success: data?.success
       }, 'app/test/page.tsx:handleGenerateAiTest');
 
-      if (!data) {
-        debugLogger.error('AI_GENERATION', 'Cloud Function returned no data', { result }, 'app/test/page.tsx:handleGenerateAiTest');
-        throw new Error('Cloud Function returned no data');
-      }
+      // If there's a local text generation fallback, use a different variable name
+      // const data = { ... } // This line causes the duplicate variable error
+      // Use localData instead if you need a fallback
 
       if (!data.text) {
-        debugLogger.error('AI_GENERATION', 'Cloud Function returned no text content', { data }, 'app/test/page.tsx:handleGenerateAiTest');
+        debugLogger.error('AI_GENERATION', 'No text content generated', { data }, 'app/test/page.tsx:handleGenerateAiTest');
         throw new Error('No text content generated');
       }
 
@@ -416,26 +451,32 @@ export default function TestPage() {
       intervalRef.current = null;
     }
     
+    // Calculate final results for display (for both authenticated and guest users)
+    const timeTaken = Math.max(1, selectedTime - timeLeft); // Ensure minimum 1 second
+    
+    // Calculate WPM safely - handle division by zero
+    let wpm = 0;
+    if (timeTaken > 0 && userInput.length > 0) {
+      wpm = Math.round((userInput.length / 5) / (timeTaken / 60));
+    }
+    
+    // Calculate accuracy safely - handle division by zero
+    let accuracy = 0;
+    if (userInput.length > 0) {
+      accuracy = Math.round(((userInput.length - errors) / userInput.length) * 100);
+    }
+    
+    // Ensure values are valid numbers (not NaN or Infinity)
+    wpm = isNaN(wpm) || !isFinite(wpm) ? 0 : Math.max(0, wpm);
+    accuracy = isNaN(accuracy) || !isFinite(accuracy) ? 0 : Math.max(0, Math.min(100, accuracy));
+    
+    // Save final results to state for display
+    setFinalWpm(wpm);
+    setFinalAccuracy(accuracy);
+
     // Save test result using Cloud Function if user is authenticated
     if (user) {
       try {
-        const timeTaken = Math.max(1, selectedTime - timeLeft); // Ensure minimum 1 second
-        
-        // Calculate WPM safely - handle division by zero
-        let wpm = 0;
-        if (timeTaken > 0 && userInput.length > 0) {
-          wpm = Math.round((userInput.length / 5) / (timeTaken / 60));
-        }
-        
-        // Calculate accuracy safely - handle division by zero
-        let accuracy = 0;
-        if (userInput.length > 0) {
-          accuracy = Math.round(((userInput.length - errors) / userInput.length) * 100);
-        }
-        
-        // Ensure values are valid numbers (not NaN or Infinity)
-        wpm = isNaN(wpm) || !isFinite(wpm) ? 0 : Math.max(0, wpm);
-        accuracy = isNaN(accuracy) || !isFinite(accuracy) ? 0 : Math.max(0, Math.min(100, accuracy));
         
         const testResultData = {
           wpm: wpm,
@@ -495,15 +536,16 @@ export default function TestPage() {
         
       } catch (error) {
         console.error('Error submitting test result:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details
+          code: error instanceof Error ? (error as any).code : undefined,
+          message: errorMessage,
+          details: error instanceof Error ? (error as any).details : undefined
         });
         
         // Show error feedback to user
         // TODO: Add error toast notification
-        alert(`Failed to save test result: ${error.message || 'Unknown error'}. Please try again.`);
+        alert(`Failed to save test result: ${errorMessage}. Please try again.`);
       }
     } else {
       console.log('User not authenticated, not saving test result');
@@ -539,7 +581,7 @@ export default function TestPage() {
         topic: aiTest.topic
       });
     }
-  }, [aiTest, debugLogger.isDebugEnabled]);
+  }, [aiTest, debugLogger]);
 
   // Simple timer logic - starts when status is 'running', stops when not
   useEffect(() => {
@@ -685,6 +727,23 @@ export default function TestPage() {
       setStatus('running');
     }
   }, [status]);
+
+  // Early return for loading state to prevent hydration issues
+  if (isLoading || !isMounted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Calculate stats
   const wpm = status === 'running' && timeLeft < selectedTime
@@ -1026,11 +1085,7 @@ export default function TestPage() {
                     })}
                     {aiTest && !isGenerating && (
                       <div className="mt-4">
-                        {console.log('🎨 AI TEST CARD IS BEING RENDERED NOW!', {
-                          aiTestId: aiTest.id,
-                          topic,
-                          handlerExists: typeof handleAiTestSelection === 'function'
-                        })}
+                        {/* AI Test Card Rendering */}
                         <GlassCard 
                           className={`p-4 border-2 cursor-pointer transition-all duration-200 hover:border-primary/50`}
                           onClick={(e) => {
@@ -1285,11 +1340,11 @@ export default function TestPage() {
             <GlassCard className="space-y-8">
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-primary mb-2">{wpm}</div>
+                  <div className="text-4xl font-bold text-primary mb-2">{finalWpm}</div>
                   <div className="text-foreground">WPM</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-primary mb-2">{accuracy}%</div>
+                  <div className="text-4xl font-bold text-primary mb-2">{finalAccuracy}%</div>
                   <div className="text-foreground">Accuracy</div>
                 </div>
                 <div className="text-center">
