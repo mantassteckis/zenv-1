@@ -400,6 +400,155 @@ try {
 
 ---
 
+## ✅ RESOLVED: Enhanced Debug System with Noise Filtering
+
+### **Problem Description**
+- **Date**: January 2025 session
+- **Severity**: Medium - Debug system overwhelmed with noise
+- **Symptoms**:
+  - Debug panel flooded with middleware logs and IDE requests
+  - Difficult to find actual application debug information
+  - Repetitive log spam from Next.js compilation and static requests
+  - Poor debugging experience due to information overload
+  - Terminal logs unaffected but debug panel cluttered
+
+### **Root Causes Identified**
+1. **No noise filtering** - All logs displayed regardless of relevance
+2. **Middleware request spam** - Every HTTP request logged in debug panel
+3. **IDE integration noise** - WebView requests cluttering debug output
+4. **Compilation message spam** - Next.js build messages overwhelming panel
+5. **No selective monitoring** - Unable to focus on specific functions or features
+6. **Lack of deduplication** - Repetitive messages not grouped or filtered
+
+### **Solution Applied**
+**Key Principle**: Intelligent filtering while preserving important debug information
+
+#### **1. Comprehensive Noise Pattern Filtering**
+```typescript
+// Enhanced DebugProvider with noise filtering
+const NOISE_PATTERNS = [
+  /middleware.*request/i,
+  /ide_webview_request/i,
+  /compilation.*successful/i,
+  /GET.*\.(css|js|png|jpg|svg)/i,
+  /health.*check/i,
+  /static.*asset/i
+];
+
+const isNoiseLog = (message: string, data?: any): boolean => {
+  return NOISE_PATTERNS.some(pattern => pattern.test(message));
+};
+```
+
+#### **2. Selective Logging Implementation**
+```typescript
+// Added selective logging state management
+const [selectiveMode, setSelectiveMode] = useState(false);
+const [targetedFunctions, setTargetedFunctions] = useState<string[]>([]);
+
+// Filter logs based on selective mode
+const shouldShowLog = (log: DebugLog): boolean => {
+  if (selectiveMode && targetedFunctions.length > 0) {
+    return targetedFunctions.some(func => 
+      log.location?.includes(func) || log.message.includes(func)
+    );
+  }
+  return !isNoiseLog(log.message, log.data);
+};
+```
+
+#### **3. Enhanced Debug UI Controls**
+```typescript
+// Added selective logging controls to DebugToggle
+<div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-sm font-medium">Selective Logging</span>
+    <Switch checked={selectiveMode} onCheckedChange={toggleSelectiveMode} />
+  </div>
+  
+  {selectiveMode && (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          value={newFunctionName}
+          onChange={(e) => setNewFunctionName(e.target.value)}
+          placeholder="Function name to monitor"
+        />
+        <Button onClick={handleAddFunction}>Add</Button>
+      </div>
+      
+      {targetedFunctions.map((func) => (
+        <Badge key={func} variant="secondary">
+          {func}
+          <button onClick={() => removeTargetFunction(func)}>×</button>
+        </Badge>
+      ))}
+    </div>
+  )}
+</div>
+```
+
+#### **4. Smart Deduplication Logic**
+```typescript
+// Prevent repetitive log spam
+const addLog = useCallback((newLog: DebugLog) => {
+  setLogs(prevLogs => {
+    // Check for recent duplicate
+    const recentDuplicate = prevLogs
+      .slice(-5)
+      .find(log => 
+        log.message === newLog.message && 
+        log.category === newLog.category &&
+        (newLog.timestamp - log.timestamp) < 1000
+      );
+    
+    if (recentDuplicate) {
+      return prevLogs; // Skip duplicate
+    }
+    
+    const updatedLogs = [...prevLogs, newLog];
+    return updatedLogs.slice(-500); // Keep last 500 logs
+  });
+}, []);
+```
+
+### **Files Modified**
+1. **context/DebugProvider.tsx** - Enhanced with noise filtering and selective logging
+2. **components/debug/DebugToggle.tsx** - Added selective logging UI controls
+3. **hooks/useDebug.ts** - Updated hook interface for new features
+4. **docs/DEBUG_GUIDE.md** - Updated documentation with new features
+
+### **Key Improvements Achieved**
+1. **Clean Debug Panel** - Noise-free debugging experience
+2. **Selective Monitoring** - Focus on specific functions when needed
+3. **Smart Filtering** - Automatic removal of irrelevant logs
+4. **Better UX** - Easier to find actual application issues
+5. **Maintained Functionality** - All existing debug features preserved
+6. **Enhanced Documentation** - Updated guides with new capabilities
+
+### **Status**: **RESOLVED** ✅
+- Debug panel now shows clean, relevant information
+- Selective logging allows targeted debugging
+- Noise filtering reduces information overload
+- Terminal logs remain unfiltered (server-side)
+- Enhanced debugging experience for developers
+
+### **Key Lessons Learned**
+1. **Intelligent filtering improves UX** - Not all logs are equally important
+2. **Selective monitoring enables focus** - Target specific functions for debugging
+3. **Deduplication prevents spam** - Group similar messages to reduce clutter
+4. **Preserve terminal logs** - Server-side logs should remain unfiltered
+5. **Document enhancements thoroughly** - Update guides with new capabilities
+
+### **Prevention Checklist**
+- [ ] Implement noise filtering for new log categories
+- [ ] Test selective logging with various function names
+- [ ] Verify deduplication works for repetitive operations
+- [ ] Ensure terminal logs remain unaffected
+- [ ] Update documentation when adding debug features
+
+---
+
 ## 🔄 REPEATED ISSUE: Debug Panel Not Hidden Properly
 
 ### **Problem Description**
@@ -579,6 +728,62 @@ const handleTestSelection = useCallback((test: PreMadeTest) => {
 ---
 
 ## 📝 Recent Error Records
+
+### **Next.js ChunkLoadError - Routing Failures (RESOLVED)**
+
+- **Date**: January 2025 session
+- **Severity**: Critical - Multiple pages failing to load
+- **Symptoms**:
+  - Dashboard, leaderboard, settings, admin/performance pages failing with ChunkLoadError
+  - `Loading chunk app/dashboard/page failed`
+  - `Loading chunk app/leaderboard/page failed` 
+  - `Loading chunk app/settings/page failed`
+  - Error: `http://localhost:3000/_next/static/chunks/app/[page]/page.js`
+
+### **Root Causes Identified**
+1. **Webpack Cache Corruption** - Build cache became corrupted causing chunk generation failures
+2. **Multiple Development Servers** - Conflicting servers running on different ports
+3. **Node Modules Inconsistency** - Potential dependency conflicts from previous builds
+4. **Next.js Build State** - Stale build artifacts interfering with new compilations
+
+### **Solution Applied**
+```bash
+# 1. Stop all running development servers
+npm run dev # Stop any running instances
+
+# 2. Clear Next.js build cache
+Remove-Item -Recurse -Force .next
+
+# 3. Clear node_modules (optional but recommended)
+Remove-Item -Recurse -Force node_modules
+
+# 4. Reinstall dependencies
+npm install
+
+# 5. Start fresh development server
+npm run dev
+```
+
+### **Resolution Status**
+- ✅ **RESOLVED**: All pages now loading successfully
+- ✅ **VERIFIED**: Server compiling properly (368 modules)
+- ✅ **TESTED**: Admin performance page working (200 status)
+- ✅ **CONFIRMED**: No more ChunkLoadError messages
+
+### **Key Lessons Learned**
+1. **Cache Management** - Regular cache clearing prevents build corruption
+2. **Server Conflicts** - Only run one development server at a time
+3. **Clean Builds** - Fresh installs resolve dependency conflicts
+4. **Monitoring** - Watch for webpack caching warnings in logs
+
+### **Prevention Checklist**
+- [ ] Monitor webpack cache warnings in development logs
+- [ ] Avoid running multiple development servers simultaneously
+- [ ] Clear `.next` cache when experiencing routing issues
+- [ ] Use `npm ci` for clean dependency installs in production
+- [ ] Regular cleanup of build artifacts during development
+
+---
 
 ### **CORS Policy Error & Test Result Saving Failure (Live Deployment)**
 

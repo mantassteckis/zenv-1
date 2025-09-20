@@ -42,6 +42,53 @@ This guide documents the comprehensive debug system implemented for ZenType, foc
 - Exports JSON file with timestamp
 - Share with developers for analysis
 
+### **Step 5: Use Selective Logging (Advanced)**
+- Toggle **"Selective Mode"** in debug panel
+- Add specific function names to monitor
+- Only logs from targeted functions will be shown
+- Useful for focused debugging of specific features
+
+---
+
+## 🔇 **Noise Filtering & Selective Logging**
+
+### **Automatic Noise Filtering**
+The debug system automatically filters out common noise patterns to provide cleaner debugging:
+
+- **Middleware Logs** - HTTP request/response logs from Next.js middleware
+- **IDE Requests** - WebView and development tool requests
+- **Compilation Messages** - Next.js build and compilation status
+- **Static Asset Requests** - CSS, JS, and image file requests
+- **Health Check Requests** - System monitoring and status checks
+
+### **Smart Deduplication**
+- Prevents repetitive log spam from recurring operations
+- Groups similar messages to reduce visual clutter
+- Maintains log integrity while improving readability
+
+### **Selective Logging Mode**
+When enabled, only logs from specified functions are displayed:
+
+```typescript
+// Example: Monitor only authentication functions
+Targeted Functions: ['loginUser', 'signupUser', 'validateToken']
+
+// Result: Only logs from these functions appear in debug panel
+```
+
+**Use Cases:**
+- Debugging specific feature flows
+- Isolating problematic functions
+- Reducing noise during focused development
+- Performance analysis of targeted code paths
+
+**How to Use:**
+1. Enable "Selective Mode" toggle in debug panel
+2. Add function names to monitor (one per line)
+3. Click "Add" to include function in monitoring
+4. Remove functions using the "×" button
+5. Clear all with "Clear All" button
+
 ---
 
 ## 🤖 **AI Generation Debugging**
@@ -160,12 +207,17 @@ This guide documents the comprehensive debug system implemented for ZenType, foc
 - **Structured data** with context and location
 - **Persistent across sessions** (localStorage)
 - **Performance optimized** (max 500 logs)
+- **Intelligent noise filtering** - Reduces middleware and system log clutter
+- **Selective function monitoring** - Target specific functions for focused debugging
 
 ### **Advanced Filtering**
 - **By Category** - Focus on specific features
 - **By Level** - Filter by severity
 - **By Location** - Find specific code areas
 - **Search functionality** - Find specific messages
+- **Noise Filtering** - Automatically filters middleware logs, IDE requests, and compilation messages
+- **Smart Deduplication** - Prevents repetitive log spam
+- **Selective Logging Mode** - Monitor only specific functions when enabled
 
 ### **Export System**
 - **JSON format** with metadata
@@ -289,6 +341,15 @@ debugLogger.info('NEW_CATEGORY', 'Description of what happened', {
 ---
 
 ## 📝 **Changelog**
+
+### **v1.1 (January 2025)**
+- Enhanced debug system with noise filtering
+- Comprehensive noise pattern filtering for middleware logs, IDE requests, and compilation messages
+- Implemented selective logging mode to monitor specific functions only
+- Enhanced DebugProvider with targeted function monitoring capabilities
+- Updated DebugToggle UI with selective logging controls and function management
+- Added smart deduplication to prevent repetitive log spam
+- Improved filtering for cleaner debugging experience
 
 ### **v1.0 (January 2025)**
 - Initial debug system implementation
