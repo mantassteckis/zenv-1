@@ -16,6 +16,7 @@ import { PreMadeTest } from "@/lib/types/database"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase/client"
 import { useDebugLogger } from "@/context/DebugProvider"
+import { useCorrelationId } from "@/hooks/useCorrelationId"
 // Removed Cloud Function imports - now using Next.js API route
 
 interface TypingCustomization {
@@ -29,6 +30,9 @@ export default function TestPage() {
   
   // Debug logging
   const debugLogger = useDebugLogger();
+  
+  // Correlation ID for request tracing
+  const { correlationId, getHeaders } = useCorrelationId();
   
   // Core state management
   const router = useRouter();
@@ -118,7 +122,9 @@ export default function TestPage() {
 
         console.log(`🔍 Fetching tests with params: ${queryParams.toString()}`);
         
-        const response = await fetch(`/api/tests?${queryParams.toString()}`);
+        const response = await fetch(`/api/tests?${queryParams.toString()}`, {
+          headers: getHeaders()
+        });
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -516,10 +522,10 @@ export default function TestPage() {
         // Call the Next.js API route instead of Cloud Function
         const response = await fetch('/api/submit-test-result', {
           method: 'POST',
-          headers: {
+          headers: getHeaders({
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${await user.getIdToken()}`
-          },
+          }),
           body: JSON.stringify(testResultData)
         });
         

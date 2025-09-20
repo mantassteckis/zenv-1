@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, QueryConstraint } from 'firebase/firestore';
 import { PreMadeTest, COLLECTIONS } from '@/lib/types/database';
+import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -28,8 +29,10 @@ try {
 }
 
 export async function GET(request: NextRequest) {
+  const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+  
   try {
-    console.log('🚀 API Route: tests called');
+    console.log(`🚀 [${correlationId}] API Route: tests called`);
     
     // Extract query parameters
     const { searchParams } = request.nextUrl;
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
     const timeLimit = searchParams.get('timeLimit');
     const category = searchParams.get('category');
     
-    console.log('🔧 Query parameters:', { difficulty, timeLimit, category });
+    console.log(`🔧 [${correlationId}] Query parameters:`, { difficulty, timeLimit, category });
 
     // Create base query - using test_contents collection as per user's Firestore structure
     let baseQuery = collection(db, COLLECTIONS.TEST_CONTENTS);
@@ -46,27 +49,27 @@ export async function GET(request: NextRequest) {
     // Add difficulty filter if provided and valid
     if (difficulty && ['Easy', 'Medium', 'Hard'].includes(difficulty)) {
       constraints.push(where('difficulty', '==', difficulty));
-      console.log(`🎯 Filtering by difficulty: ${difficulty}`);
+      console.log(`🎯 [${correlationId}] Filtering by difficulty: ${difficulty}`);
     }
 
     // Add time limit filter if provided (convert seconds to match database)
     if (timeLimit) {
       const timeLimitSeconds = parseInt(timeLimit);
       constraints.push(where('timeLimit', '==', timeLimitSeconds));
-      console.log(`⏱️ Filtering by timeLimit: ${timeLimitSeconds} seconds`);
+      console.log(`⏱️ [${correlationId}] Filtering by timeLimit: ${timeLimitSeconds} seconds`);
     }
 
     // Add category filter if provided
     if (category) {
       constraints.push(where('category', '==', category));
-      console.log(`📂 Filtering by category: ${category}`);
+      console.log(`📂 [${correlationId}] Filtering by category: ${category}`);
     }
 
     // Create final query with constraints
     const finalQuery = constraints.length > 0 ? query(baseQuery, ...constraints) : baseQuery;
 
     // Execute the query
-    console.log('📝 Executing Firestore query...');
+    console.log(`📝 [${correlationId}] Executing Firestore query...`);
     const querySnapshot = await getDocs(finalQuery);
     
     // Process the results
@@ -89,25 +92,32 @@ export async function GET(request: NextRequest) {
       results.push(testData);
     });
 
-    console.log(`✅ Found ${results.length} pre-made tests`);
+    console.log(`✅ [${correlationId}] Found ${results.length} pre-made tests`);
 
-    // Return formatted response
-    return NextResponse.json({
+    // Return formatted response with correlation ID in headers
+    const response = NextResponse.json({
       tests: results,
       total: results.length
     });
+    
+    response.headers.set(CORRELATION_ID_HEADER, correlationId);
+    return response;
 
   } catch (error) {
-    console.error('💥 Error fetching pre-made tests:', error);
+    console.error(`💥 [${correlationId}] Error fetching pre-made tests:`, error);
     
     // Return detailed error information for debugging
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { 
         error: 'Failed to fetch tests',
         details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        correlationId
       },
       { status: 500 }
     );
+    
+    errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+    return errorResponse;
   }
 }

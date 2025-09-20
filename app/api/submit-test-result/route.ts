@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { COLLECTIONS } from '@/lib/types/database';
+import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -40,8 +43,10 @@ interface TestResultData {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 API Route: submit-test-result called');
-    console.log('🔧 Firebase config check:', {
+    const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+    
+    console.log(`🚀 [${correlationId}] API Route: submit-test-result called`);
+    console.log(`🔧 [${correlationId}] Firebase config check:`, {
       apiKey: !!firebaseConfig.apiKey,
       projectId: firebaseConfig.projectId,
       authDomain: firebaseConfig.authDomain
@@ -49,14 +54,16 @@ export async function POST(request: NextRequest) {
     
     // Get the authorization header
     const authHeader = request.headers.get('authorization');
-    console.log('🔑 Auth header present:', !!authHeader);
+    console.log(`🔑 [${correlationId}] Auth header present:`, !!authHeader);
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('❌ No valid auth header');
-      return NextResponse.json(
-        { error: 'Unauthorized - No valid token provided' },
+      console.log(`❌ [${correlationId}] No valid auth header`);
+      const errorResponse = NextResponse.json(
+        { error: 'Unauthorized - No valid token provided', correlationId },
         { status: 401 }
       );
+      errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+      return errorResponse;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -80,15 +87,15 @@ export async function POST(request: NextRequest) {
         throw new Error('No user ID in token');
       }
       
-      console.log('✅ Token validated for user:', userId);
+      console.log(`✅ [${correlationId}] Token validated for user:`, userId);
     } catch (error) {
-      console.error('❌ Token validation failed:', error);
+      console.error(`❌ [${correlationId}] Token validation failed:`, error);
       // For testing purposes, use a fallback user ID
       userId = 'test-user-fallback';
-      console.log('🔄 Using fallback user ID for testing:', userId);
+      console.log(`🔄 [${correlationId}] Using fallback user ID for testing:`, userId);
     }
     const testData: TestResultData = await request.json();
-    console.log('Test data received:', testData);
+    console.log(`📝 [${correlationId}] Test data received:`, testData);
 
     // Validate the test data
     const validationErrors: string[] = [];
@@ -130,10 +137,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (validationErrors.length > 0) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: validationErrors },
+      const errorResponse = NextResponse.json(
+        { error: 'Validation failed', details: validationErrors, correlationId },
         { status: 400 }
       );
+      errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+      return errorResponse;
     }
 
     // Simple approach: Just save the test result for now
@@ -152,23 +161,23 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     };
     
-    console.log('💾 Attempting to save test result:', testResultData);
-    console.log('🔧 Database instance check:', !!db);
-    console.log('🔧 Collection reference check:', !!collection(db, 'testResults'));
+    console.log(`💾 [${correlationId}] Attempting to save test result:`, testResultData);
+    console.log(`🔧 [${correlationId}] Database instance check:`, !!db);
+    console.log(`🔧 [${correlationId}] Collection reference check:`, !!collection(db, 'testResults'));
     
     if (!db) {
       throw new Error('Firebase database not initialized');
     }
     
     try {
-      console.log('📝 Creating document in testResults collection...');
+      console.log(`📝 [${correlationId}] Creating document in testResults collection...`);
       const testResultsRef = collection(db, 'testResults');
-      console.log('📝 Collection reference created:', !!testResultsRef);
+      console.log(`📝 [${correlationId}] Collection reference created:`, !!testResultsRef);
       
       const docRef = await addDoc(testResultsRef, testResultData);
-      console.log('✅ Test result saved successfully with ID:', docRef.id);
+      console.log(`✅ [${correlationId}] Test result saved successfully with ID:`, docRef.id);
     } catch (firestoreError) {
-      console.error('❌ Firestore error details:', {
+      console.error(`❌ [${correlationId}] Firestore error details:`, {
         code: firestoreError.code,
         message: firestoreError.message,
         stack: firestoreError.stack
@@ -176,24 +185,30 @@ export async function POST(request: NextRequest) {
       throw firestoreError;
     }
 
-    return NextResponse.json({ 
+    const successResponse = NextResponse.json({ 
       success: true, 
-      message: 'Test result saved successfully' 
+      message: 'Test result saved successfully',
+      correlationId
     });
+    successResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+    return successResponse;
 
   } catch (error) {
-    console.error('💥 Error in submit-test-result API:', error);
-    console.error('💥 Error type:', typeof error);
-    console.error('💥 Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error(`💥 [${correlationId}] Error in submit-test-result API:`, error);
+    console.error(`💥 [${correlationId}] Error type:`, typeof error);
+    console.error(`💥 [${correlationId}] Error message:`, error instanceof Error ? error.message : 'Unknown error');
+    console.error(`💥 [${correlationId}] Error stack:`, error instanceof Error ? error.stack : 'No stack');
     
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { 
         error: 'Internal server error', 
         details: error instanceof Error ? error.message : 'Unknown error',
-        type: typeof error
+        type: typeof error,
+        correlationId
       },
       { status: 500 }
     );
+    errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+    return errorResponse;
   }
 }
