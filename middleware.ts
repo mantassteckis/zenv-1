@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   // Handle Vite client requests that may come from browser dev tools or extensions
   // This prevents 404 errors in development when tools expect Vite's HMR client
   if (request.nextUrl.pathname === '/@vite/client') {
-    return new NextResponse('', { status: 204 }) // No Content
+    return new NextResponse('', { status: 200 }) // OK
   }
 
   // Handle correlation ID for request tracing

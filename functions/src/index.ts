@@ -6,6 +6,8 @@ import * as logger from "firebase-functions/logger";
 import { firebaseLogger, createFirebaseContext, createTimingContext } from './structured-logger';
 // Import config to load environment variables
 import './config';
+// Import log drain function
+export { vercelLogDrain } from './vercel-log-drain';
 // Initialize Firebase Admin
 initializeApp();
 const db = getFirestore();

@@ -2,6 +2,57 @@
 
 This document records critical errors encountered during development and their solutions to prevent time waste in future debugging sessions.
 
+## 🚨 CRITICAL: Next.js API Route 404 Errors
+
+### **Problem Description**
+- **Date**: 2025-09-20
+- **Severity**: Critical - Admin log search API completely non-functional
+- **Symptoms**:
+  - All API routes under `/api/admin/logs/search` return 404 Not Found
+  - Simple test routes also return 404 (e.g., `/api/test`)
+  - File structure appears correct but Next.js not recognizing routes
+  - Server starts successfully but routes not compiled/loaded
+  - Middleware logs show requests reaching server but routes not found
+
+### **Root Causes Identified**
+1. **Import Path Resolution Issues** - TypeScript compilation errors with `@/lib/structured-logger` and `@/src/lib/performance-middleware` imports
+2. **TypeScript Compilation Blocking Route Loading** - Routes with TS errors may not be loaded by Next.js
+3. **Timestamp Type Conflicts** - Firebase Timestamp vs Date type mismatches preventing compilation
+4. **Performance Middleware Import Issues** - Incorrect path resolution for performance monitoring wrapper
+5. **Route Handler Export Problems** - Potential issues with async function exports in route handlers
+
+### **Technical Details from Terminal Logs**
+```
+# TypeScript Compilation Errors:
+src/app/api/admin/logs/search/route.ts:3:24 - error TS2307: Cannot find module '@/lib/structured-logger'
+src/app/api/admin/logs/search/route.ts:4:43 - error TS2307: Cannot find module '@/src/lib/performance-middleware'
+src/app/api/admin/logs/search/route.ts:172:186 - error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+
+# Server Logs Show 404s:
+GET /api/admin/logs/search?ide_webview_request_time=1758352289823 404 in 59ms
+GET /api/test 404 in 1403ms
+```
+
+### **RESOLUTION FOUND** ✅
+- **Root Cause**: **Dual App Directory Structure**
+  - Project had both `/app` and `/src/app` directories
+  - Next.js was using root-level `/app` directory instead of `/src/app`
+  - Routes placed in `/src/app/api/` were not being recognized
+
+- **Solution Applied**:
+  1. ✅ Identified dual directory structure via systematic investigation
+  2. ✅ Created minimal route handler in correct `/app/api/admin/logs/search/route.ts`
+  3. ✅ Verified route now returns 200 OK with proper JSON response
+  4. ✅ Confirmed Next.js routing mechanism works correctly
+
+- **Key Learning**: Always verify which app directory Next.js is actually using
+- **Status**: **RESOLVED** - API routes now functional in correct directory structure
+
+### **Next Steps for Full Implementation**
+1. **Immediate**: Move all existing API routes from `/src/app/api/` to `/app/api/`
+2. **Short-term**: Re-implement original functionality with proper imports
+3. **Long-term**: Establish clear project structure guidelines to prevent confusion
+
 ## 🚨 CRITICAL: Typing Test Keystroke & Timer Issues
 
 ### **Problem Description**

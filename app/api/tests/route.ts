@@ -4,6 +4,7 @@ import { getFirestore, collection, query, where, getDocs, QueryConstraint } from
 import { PreMadeTest, COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
+import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -29,7 +30,7 @@ try {
   throw new Error('Firebase initialization failed');
 }
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const { startTime } = createTimingContext();
   const context = createApiContext(request, 'GET /api/tests');
   
@@ -133,3 +134,10 @@ export async function GET(request: NextRequest) {
     return errorResponse;
   }
 }
+
+// Export the performance-monitored version
+export const GET = withPerformanceMonitoring(handleGET, {
+  enablePayloadTracking: false, // GET requests don't have request payloads
+  slowRequestThreshold: 1500, // 1.5 seconds for database queries
+  maxPayloadSizeToLog: 10000
+});

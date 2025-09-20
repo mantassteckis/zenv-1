@@ -5,6 +5,7 @@ import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
+import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -42,7 +43,7 @@ interface TestResultData {
   testId: string;
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   const { startTime } = createTimingContext();
   const context = createApiContext(request, 'POST /api/submit-test-result');
   
@@ -230,3 +231,10 @@ export async function POST(request: NextRequest) {
     return errorResponse;
   }
 }
+
+// Export the performance-monitored version
+export const POST = withPerformanceMonitoring(handlePOST, {
+  enablePayloadTracking: true,
+  slowRequestThreshold: 2000, // 2 seconds for database operations
+  maxPayloadSizeToLog: 5000
+});
