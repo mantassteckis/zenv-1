@@ -82,6 +82,38 @@ export default function TestPage() {
     setIsMounted(true);
   }, []);
 
+  // Add sample debug logs for testing the enhanced debugger
+  useEffect(() => {
+    if (debugLogger.isDebugEnabled && isMounted) {
+      debugLogger.info('UI', 'Test page component mounted', { 
+        timestamp: Date.now(),
+        component: 'TestPage',
+        route: '/test',
+        userAuthenticated: !!user
+      });
+      debugLogger.debug('PERFORMANCE', 'Component render time measured', { 
+        renderTime: '45ms',
+        componentSize: '2.3KB',
+        memoryUsage: '12MB'
+      });
+      debugLogger.warn('AUTH', 'Session will expire soon', { 
+        expiresIn: '5 minutes',
+        userId: user?.uid,
+        lastActivity: new Date().toISOString()
+      });
+      debugLogger.error('API', 'Failed to fetch user preferences', { 
+        error: 'Network timeout',
+        endpoint: '/api/user/preferences',
+        retryCount: 3
+      });
+      debugLogger.critical('SYSTEM', 'Critical system error detected', {
+        errorCode: 'SYS_001',
+        severity: 'high',
+        affectedUsers: 1
+      });
+    }
+  }, [debugLogger, isMounted, user]);
+
   // Load saved preferences (only after mount)
   useEffect(() => {
     if (!isMounted) return;
