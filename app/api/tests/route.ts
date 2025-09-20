@@ -3,6 +3,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, QueryConstraint } from 'firebase/firestore';
 import { PreMadeTest, COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
+import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -29,10 +30,11 @@ try {
 }
 
 export async function GET(request: NextRequest) {
-  const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+  const { startTime } = createTimingContext();
+  const context = createApiContext(request, 'GET /api/tests');
   
   try {
-    console.log(`🚀 [${correlationId}] API Route: tests called`);
+    logger.info(context, 'API Route: tests called');
     
     // Extract query parameters
     const { searchParams } = request.nextUrl;
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
     const timeLimit = searchParams.get('timeLimit');
     const category = searchParams.get('category');
     
-    console.log(`🔧 [${correlationId}] Query parameters:`, { difficulty, timeLimit, category });
+    logger.info(context, 'Query parameters extracted', { difficulty, timeLimit, category });
 
     // Create base query - using test_contents collection as per user's Firestore structure
     let baseQuery = collection(db, COLLECTIONS.TEST_CONTENTS);
@@ -49,27 +51,27 @@ export async function GET(request: NextRequest) {
     // Add difficulty filter if provided and valid
     if (difficulty && ['Easy', 'Medium', 'Hard'].includes(difficulty)) {
       constraints.push(where('difficulty', '==', difficulty));
-      console.log(`🎯 [${correlationId}] Filtering by difficulty: ${difficulty}`);
+      logger.info(context, 'Applied difficulty filter', { difficulty });
     }
 
     // Add time limit filter if provided (convert seconds to match database)
     if (timeLimit) {
       const timeLimitSeconds = parseInt(timeLimit);
       constraints.push(where('timeLimit', '==', timeLimitSeconds));
-      console.log(`⏱️ [${correlationId}] Filtering by timeLimit: ${timeLimitSeconds} seconds`);
+      logger.info(context, 'Applied time limit filter', { timeLimitSeconds });
     }
 
     // Add category filter if provided
     if (category) {
       constraints.push(where('category', '==', category));
-      console.log(`📂 [${correlationId}] Filtering by category: ${category}`);
+      logger.info(context, 'Applied category filter', { category });
     }
 
     // Create final query with constraints
     const finalQuery = constraints.length > 0 ? query(baseQuery, ...constraints) : baseQuery;
 
     // Execute the query
-    console.log(`📝 [${correlationId}] Executing Firestore query...`);
+    logger.info(context, 'Executing Firestore query', { constraintsCount: constraints.length });
     const querySnapshot = await getDocs(finalQuery);
     
     // Process the results
@@ -92,7 +94,7 @@ export async function GET(request: NextRequest) {
       results.push(testData);
     });
 
-    console.log(`✅ [${correlationId}] Found ${results.length} pre-made tests`);
+    logger.info(context, 'Successfully fetched tests', { testsFound: results.length });
 
     // Return formatted response with correlation ID in headers
     const response = NextResponse.json({
@@ -100,13 +102,19 @@ export async function GET(request: NextRequest) {
       total: results.length
     });
     
+    const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
     response.headers.set(CORRELATION_ID_HEADER, correlationId);
+    
+    // Log the successful request
+    logger.logRequest(context, startTime, 200, { testsReturned: results.length });
+    
     return response;
 
   } catch (error) {
-    console.error(`💥 [${correlationId}] Error fetching pre-made tests:`, error);
+    logger.error(context, error instanceof Error ? error : new Error(String(error)));
     
     // Return detailed error information for debugging
+    const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
     const errorResponse = NextResponse.json(
       { 
         error: 'Failed to fetch tests',
@@ -118,6 +126,10 @@ export async function GET(request: NextRequest) {
     );
     
     errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+    
+    // Log the failed request
+    logger.logRequest(context, startTime, 500, { errorMessage: error instanceof Error ? error.message : String(error) });
+    
     return errorResponse;
   }
 }

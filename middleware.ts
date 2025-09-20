@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateCorrelationId, isValidCorrelationId, CORRELATION_ID_HEADER } from './lib/correlation-id'
+import { logger, createApiContext, createTimingContext } from './lib/structured-logger'
 
 export function middleware(request: NextRequest) {
+  const { startTime } = createTimingContext()
+  
   // Handle Vite client requests that may come from browser dev tools or extensions
   // This prevents 404 errors in development when tools expect Vite's HMR client
   if (request.nextUrl.pathname === '/@vite/client') {
@@ -10,6 +13,7 @@ export function middleware(request: NextRequest) {
 
   // Handle correlation ID for request tracing
   let correlationId = request.headers.get(CORRELATION_ID_HEADER)
+  const incomingCorrelationId = correlationId
   
   // Generate correlation ID if not provided or invalid
   if (!correlationId || !isValidCorrelationId(correlationId)) {
@@ -23,6 +27,13 @@ export function middleware(request: NextRequest) {
   // Add correlation ID to request headers for API routes
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set(CORRELATION_ID_HEADER, correlationId)
+  
+  // Log the request with structured logging
+  const context = createApiContext(request, 'middleware')
+  logger.logRequest(context, startTime, 200, {
+    correlationIdGenerated: !incomingCorrelationId || !isValidCorrelationId(incomingCorrelationId),
+    originalCorrelationId: incomingCorrelationId
+  })
   
   return NextResponse.next({
     request: {

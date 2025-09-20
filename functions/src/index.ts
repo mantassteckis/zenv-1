@@ -3,6 +3,7 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
+import { firebaseLogger, createFirebaseContext, createTimingContext } from './structured-logger';
 // Import config to load environment variables
 import './config';
 // Initialize Firebase Admin
@@ -116,22 +117,33 @@ export const submitTestResult = onCall({
     "https://127.0.0.1:3001"
   ]
 }, async (request) => {
+  const { startTime } = createTimingContext();
+  
   // Authentication Guard
   if (!request.auth) {
-    logger.warn("Unauthenticated request to submitTestResult");
+    const context = createFirebaseContext('submitTestResult');
+    firebaseLogger.warn(context, "Unauthenticated request to submitTestResult");
     throw new HttpsError("unauthenticated", "User must be authenticated to submit test results");
   }
 
   const userId = request.auth.uid;
-  logger.info("Test result submission request", { userId });
+  const context = createFirebaseContext('submitTestResult', userId);
+  firebaseLogger.info(context, "Test result submission request");
 
   // Data Extraction & Validation
   const testData = request.data as TestResultData;
   
   if (!testData) {
-    logger.warn("No test data provided", { userId });
+    firebaseLogger.warn(context, "No test data provided");
     throw new HttpsError("invalid-argument", "Test data is required");
   }
+  
+  firebaseLogger.info(context, "Test data received", {
+    wpm: testData.wpm,
+    accuracy: testData.accuracy,
+    testType: testData.testType,
+    difficulty: testData.difficulty
+  });
 
   // Server-side validation
   const validationErrors: string[] = [];
@@ -180,7 +192,7 @@ export const submitTestResult = onCall({
   }
 
   if (validationErrors.length > 0) {
-    logger.warn("Validation failed", { userId, errors: validationErrors });
+    firebaseLogger.warn(context, "Validation failed", { validationErrors });
     throw new HttpsError("invalid-argument", `Validation failed: ${validationErrors.join(", ")}`);
   }
 
@@ -204,14 +216,14 @@ export const submitTestResult = onCall({
       };
 
       transaction.set(testResultRef, testResultData);
-      logger.info("Test result document created", { userId, testResultId: testResultRef.id });
+      firebaseLogger.info(context, "Test result document created", { testResultId: testResultRef.id });
 
       // Transaction Step B - Update User Profile Stats
       const userProfileRef = db.collection("profiles").doc(userId);
       const userProfileDoc = await transaction.get(userProfileRef);
 
       if (!userProfileDoc.exists) {
-        logger.warn("User profile not found during stats update", { userId });
+        firebaseLogger.warn(context, "User profile not found during stats update");
         throw new HttpsError("not-found", "User profile not found");
       }
 
@@ -253,12 +265,13 @@ export const submitTestResult = onCall({
       logger.info("User stats updated", { userId, updatedStats });
     });
 
-    logger.info("Test result submitted successfully", { userId });
+    firebaseLogger.logFunction(context, startTime, true);
+    firebaseLogger.info(context, "Test result submitted successfully");
     return { success: true, message: "Test result saved successfully" };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error("Error submitting test result", { userId, error: errorMessage });
+    firebaseLogger.logFunction(context, startTime, false);
+    firebaseLogger.error(context, error as Error);
     
     if (error instanceof HttpsError) {
       throw error;
