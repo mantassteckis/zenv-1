@@ -131,3 +131,5 @@
 {"timestamp":"2025-09-22T18:06:38.845Z","endpoint":"/api/v1/submit-test-result","method":"POST","responseTime":1056,"statusCode":200,"memoryUsage":512.0480499267578,"correlationId":"req-1758564396386-2ot0foexhrw","userId":"8KXxSzoKw7RObh6oVRAu4oGTm2R2"}
 {"timestamp":"2025-09-22T18:07:03.666Z","endpoint":"/api/v1/tests","method":"GET","responseTime":777,"statusCode":200,"memoryUsage":580.0347366333008,"correlationId":"req-1758564421028-dtjfck9gke"}
 {"timestamp":"2025-09-22T18:07:04.062Z","endpoint":"/api/v1/tests","method":"GET","responseTime":291,"statusCode":200,"memoryUsage":584.2280960083008,"correlationId":"req-1758564423711-dmdsgq3pub"}
+{"timestamp":"2025-09-22T18:16:00.289Z","endpoint":"/api/v1/tests","method":"GET","responseTime":949,"statusCode":200,"memoryUsage":545.2192001342773,"correlationId":"req-1758564955897-7qu2kunobnd"}
+{"timestamp":"2025-09-22T18:16:00.574Z","endpoint":"/api/v1/tests","method":"GET","responseTime":193,"statusCode":200,"memoryUsage":542.7732086181641,"correlationId":"req-1758564960357-9uyaeh4jdgd"}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, QueryConstraint } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, QueryConstraint, orderBy, limit, startAfter, doc, getDoc } from 'firebase/firestore';
 import { PreMadeTest, COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
@@ -43,7 +43,18 @@ async function handleGET(request: NextRequest) {
     const timeLimit = searchParams.get('timeLimit');
     const category = searchParams.get('category');
     
-    logger.info(context, 'Query parameters extracted', { difficulty, timeLimit, category });
+    // Pagination parameters
+    const limitParam = searchParams.get('limit');
+    const cursor = searchParams.get('cursor');
+    const pageLimit = limitParam ? Math.min(parseInt(limitParam), 50) : 20; // Default 20, max 50
+    
+    logger.info(context, 'Query parameters extracted', { 
+      difficulty, 
+      timeLimit, 
+      category, 
+      limit: pageLimit, 
+      cursor: cursor ? 'provided' : 'none' 
+    });
 
     // Create base query - using test_contents collection as per user's Firestore structure
     let baseQuery = collection(db, COLLECTIONS.TEST_CONTENTS);
@@ -68,8 +79,29 @@ async function handleGET(request: NextRequest) {
       logger.info(context, 'Added category filter', { category });
     }
 
+    // Add ordering for consistent pagination
+    constraints.push(orderBy('__name__')); // Order by document ID for consistent pagination
+    
+    // Add pagination limit
+    constraints.push(limit(pageLimit + 1)); // Fetch one extra to check if there's a next page
+
+    // Handle cursor-based pagination
+    if (cursor) {
+      try {
+        const cursorDoc = await getDoc(doc(db, COLLECTIONS.TEST_CONTENTS, cursor));
+        if (cursorDoc.exists()) {
+          constraints.push(startAfter(cursorDoc));
+          logger.info(context, 'Added cursor pagination', { cursor });
+        } else {
+          logger.warn(context, 'Invalid cursor provided', { cursor });
+        }
+      } catch (cursorError) {
+        logger.warn(context, 'Error processing cursor', { cursor, error: cursorError });
+      }
+    }
+
     // Execute query
-    const finalQuery = constraints.length > 0 ? query(baseQuery, ...constraints) : baseQuery;
+    const finalQuery = query(baseQuery, ...constraints);
     const querySnapshot = await getDocs(finalQuery);
     
     logger.info(context, 'Firestore query executed', { 
@@ -78,10 +110,10 @@ async function handleGET(request: NextRequest) {
     });
 
     // Transform documents to PreMadeTest format
-    const tests: PreMadeTest[] = [];
+    const allTests: PreMadeTest[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      tests.push({
+      allTests.push({
         id: doc.id,
         text: data.text || '',
         difficulty: data.difficulty || 'Medium',
@@ -92,9 +124,29 @@ async function handleGET(request: NextRequest) {
       });
     });
 
-    logger.info(context, 'Tests transformed successfully', { testsCount: tests.length });
+    // Determine if there's a next page and prepare response
+    const hasNextPage = allTests.length > pageLimit;
+    const tests = hasNextPage ? allTests.slice(0, pageLimit) : allTests;
+    const nextCursor = hasNextPage ? tests[tests.length - 1].id : null;
 
-    const response = NextResponse.json({ tests });
+    logger.info(context, 'Tests transformed successfully', { 
+      testsCount: tests.length,
+      hasNextPage,
+      nextCursor: nextCursor ? 'provided' : 'none'
+    });
+
+    // Create paginated response format
+    const responseData = {
+      data: tests,
+      pagination: {
+        nextCursor,
+        hasNextPage,
+        limit: pageLimit,
+        count: tests.length
+      }
+    };
+
+    const response = NextResponse.json(responseData);
     response.headers.set(CORRELATION_ID_HEADER, context.correlationId);
     
     logger.info(context, 'API Route: v1/tests completed successfully', { 
