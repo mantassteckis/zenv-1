@@ -24,7 +24,7 @@ interface TypingCustomization {
   font: string
 }
 
-export default function TestPage() {
+export default function TestPage(): JSX.Element | null {
   // Auth and user data
   const { user, profile, isLoading } = useAuth();
   

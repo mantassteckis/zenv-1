@@ -19,7 +19,7 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ]
 
-export function Header() {
+export function Header(): JSX.Element {
   const pathname = usePathname()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const { user, profile, isLoading } = useAuth();
