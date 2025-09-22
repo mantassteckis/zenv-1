@@ -83,7 +83,7 @@ const LogSearchDashboard: React.FC = () => {
       queryParams.append('page', currentPage.toString());
       queryParams.append('pageSize', pageSize.toString());
 
-      const response = await fetch(`/api/admin/logs/search?${queryParams}`);
+      const response = await fetch(`/api/v1/admin/logs/search?${queryParams}`);
       
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`);

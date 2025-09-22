@@ -142,7 +142,7 @@ export default function TestPage() {
 
         console.log(`🔍 Fetching tests with params: ${queryParams.toString()}`);
         
-        const response = await fetch(`/api/tests?${queryParams.toString()}`, {
+        const response = await fetch(`/api/v1/tests?${queryParams.toString()}`, {
           headers: getHeaders()
         });
         
@@ -688,12 +688,12 @@ export default function TestPage() {
         });
 
         // Log API call
-        debugLogger.logApiCall('POST', '/api/submit-test-result', testResultData);
+        debugLogger.logApiCall('POST', '/api/v1/submit-test-result', testResultData);
         
         const callStartTime = Date.now();
         
         // Call the Next.js API route instead of Cloud Function
-        const response = await fetch('/api/submit-test-result', {
+        const response = await fetch('/api/v1/submit-test-result', {
           method: 'POST',
           headers: getHeaders({
             'Content-Type': 'application/json',

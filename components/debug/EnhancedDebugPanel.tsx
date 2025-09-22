@@ -45,11 +45,11 @@ const getCategoryConfig = (category: string): CategoryConfig => {
 };
 
 const LEVEL_CONFIGS = {
-  debug: { icon: Info, color: 'text-gray-400', bgColor: 'bg-gray-800' },
-  info: { icon: Info, color: 'text-blue-400', bgColor: 'bg-blue-900' },
-  warn: { icon: AlertTriangle, color: 'text-yellow-400', bgColor: 'bg-yellow-900' },
-  error: { icon: AlertCircle, color: 'text-red-400', bgColor: 'bg-red-900' },
-  critical: { icon: Zap, color: 'text-red-500', bgColor: 'bg-red-800' }
+  debug: { icon: Info, color: 'text-gray-400', bgColor: 'bg-gray-800', borderClass: 'border-l-gray-500' },
+  info: { icon: Info, color: 'text-blue-400', bgColor: 'bg-blue-900', borderClass: 'border-l-blue-500' },
+  warn: { icon: AlertTriangle, color: 'text-yellow-400', bgColor: 'bg-yellow-900', borderClass: 'border-l-yellow-500' },
+  error: { icon: AlertCircle, color: 'text-red-400', bgColor: 'bg-red-900', borderClass: 'border-l-red-500' },
+  critical: { icon: Zap, color: 'text-red-500', bgColor: 'bg-red-800', borderClass: 'border-l-red-500' }
 };
 
 export function EnhancedDebugPanel() {
@@ -119,7 +119,7 @@ export function EnhancedDebugPanel() {
   // Group logs by different criteria
   const groupedLogs = useMemo(() => {
     switch (viewMode) {
-      case 'flow':
+      case 'flow': {
         const flowGroups = new Map<string, typeof filteredLogs>();
         const noFlowLogs: typeof filteredLogs = [];
         
@@ -135,8 +135,9 @@ export function EnhancedDebugPanel() {
         });
         
         return { flowGroups, noFlowLogs };
+      }
         
-      case 'category':
+      case 'category': {
         const categoryGroups = new Map<string, typeof filteredLogs>();
         filteredLogs.forEach(log => {
           if (!categoryGroups.has(log.category)) {
@@ -145,6 +146,7 @@ export function EnhancedDebugPanel() {
           categoryGroups.get(log.category)!.push(log);
         });
         return { categoryGroups };
+      }
         
       default:
         return { chronological: filteredLogs };
@@ -202,7 +204,7 @@ export function EnhancedDebugPanel() {
       <div
         key={log.id}
         className={`p-3 rounded border-l-4 cursor-pointer hover:bg-gray-800/30 ${
-          isInFlow ? 'ml-4 border-l-gray-600' : `border-l-${levelConfig.color.split('-')[1]}-500`
+          isInFlow ? 'ml-4 border-l-gray-600' : levelConfig.borderClass
         }`}
         onClick={() => toggleLogExpansion(log.id)}
       >

@@ -134,7 +134,7 @@ This service comprises the Next.js API Routes that act as a backend-for-frontend
 *   `POST /api/submit-test-result`
     *   **Description**: Acts as a secure proxy. It receives the test result from the client, validates the user's authentication token from the `Authorization` header, and then calls the `submitTestResult` Firebase Cloud Function.
 *   `POST /api/test/ai_text`
-    *   **Description**: A secure proxy for AI test generation. It authenticates the user and then calls the `generateAITest` Firebase Cloud Function, passing along the topic.
+    *   **Description**: A secure proxy for AI test generation. It authenticates the user and then calls the `generateAiTest` Firebase Cloud Function, passing along the topic.
 *   `GET /api/leaderboard`
     *   **Description**: Fetches and returns formatted data for the public leaderboard. This endpoint is read-only and may have different caching rules than user-specific data.
 
@@ -171,10 +171,10 @@ This service comprises the Next.js API Routes that act as a backend-for-frontend
 #### C. Dependencies & Integrations
 
 **1. Internal Dependencies:**
-*   The **Next.js API Routes** are tightly coupled with the **Firebase Backend**. Specifically, the proxy endpoints (`/api/submit-test-result`, `/api/test/ai_text`) directly call their corresponding Firebase Cloud Functions (`submitTestResult`, `generateAITest`) to perform their operations.
+*   The **Next.js API Routes** are tightly coupled with the **Firebase Backend**. Specifically, the proxy endpoints (`/api/submit-test-result`, `/api/test/ai_text`) directly call their corresponding Firebase Cloud Functions (`submitTestResult`, `generateAiTest`) to perform their operations.
 
 **2. External Dependencies:**
-*   **Google Genkit (via Gemini API)**: The `generateAITest` function depends on the Google AI Platform to generate dynamic typing test content. This is a critical external dependency for the AI features.
+*   **Google Genkit (via Gemini API)**: The `generateAiTest` function depends on the Google AI Platform to generate dynamic typing test content. This is a critical external dependency for the AI features.
 
 **3. Data Stores:**
 *   The Next.js API routes primarily connect to **Cloud Firestore** to retrieve data for read-only operations, such as fetching the list of `preMadeTests` for the `GET /api/tests` endpoint.

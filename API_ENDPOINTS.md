@@ -1,5 +1,9 @@
 # API Endpoints
 
+## API Versioning
+
+All API endpoints are now versioned under `/api/v1/` to ensure backward compatibility and future extensibility. The current version is v1.
+
 ## Firebase Cloud Functions
 
 ### generateAiTest
@@ -21,12 +25,15 @@
 **Response:**
 ```typescript
 {
-  success: boolean;
-  text: string;           // Generated typing test content
-  testId?: string;        // ID if saved to Firestore
-  wordCount: number;      // Word count of generated text
-  saved: boolean;         // Whether test was saved
-  userInterestsIncluded: boolean;
+  mode: 'immediate' | 'job';       // Response mode
+  text?: string;                   // Present when mode === 'immediate'
+  testId?: string;                 // ID if saved to Firestore
+  wordCount?: number;              // Present when mode === 'immediate'
+  saved?: boolean;                 // Present when mode === 'immediate'
+  userInterestsIncluded?: boolean; // Present when mode === 'immediate'
+  jobId?: string;                  // Present when mode === 'job'
+  status?: 'queued' | 'processing' | 'succeeded' | 'failed';
+  pollAfterMs?: number;           // Client polling hint
   message: string;
 }
 ```
@@ -66,7 +73,7 @@
 
 ## Next.js API Routes
 
-### GET /api/tests
+### GET /api/v1/tests
 **Purpose:** Fetch pre-made typing tests with filtering  
 **Authentication:** Not required  
 
@@ -92,7 +99,7 @@ interface PreMadeTest {
 }
 ```
 
-### POST /api/submit-test-result
+### POST /api/v1/submit-test-result
 **Purpose:** Proxy endpoint for submitTestResult Cloud Function  
 **Authentication:** Required (Authorization header)  
 **Note:** This endpoint validates auth and forwards to the Cloud Function Documentation
@@ -102,7 +109,7 @@ This document tracks all API routes and Cloud Functions created for the ZenType 
 ## Next.js API Routes
 
 ### Admin Logs Search
-**Endpoint:** `GET /api/admin/logs/search`
+**Endpoint:** `GET /api/v1/admin/logs/search`
 
 **Purpose:** Search and retrieve performance logs for admin dashboard monitoring
 
@@ -150,7 +157,7 @@ This document tracks all API routes and Cloud Functions created for the ZenType 
 - Performance middleware automatically logs all API requests
 
 ### Admin Performance Stats
-**Endpoint:** `GET /api/admin/performance/stats`
+**Endpoint:** `GET /api/v1/admin/performance/stats`
 
 **Purpose:** Get aggregated performance statistics for admin dashboard
 
@@ -207,7 +214,8 @@ This document tracks all API routes and Cloud Functions created for the ZenType 
 
 ## Implementation Notes
 
-- All API routes follow RESTful conventions
+- All API routes follow RESTful conventions and are versioned under `/api/v1/`
 - Error responses include correlation IDs for debugging
 - Performance monitoring is built into all endpoints
 - Authentication will be added in future iterations
+- Legacy endpoints without `/v1/` prefix are deprecated and should not be used

@@ -68,11 +68,11 @@ Claude's plan proposes a more comprehensive and standardized structure for every
 
 ### Action Items:
 
-1.  **Refactor the `generateAITest` Cloud Function.**
-    *   **Instruction:** The `generateAITest` function, which can be slow, must be changed to an asynchronous workflow.
+1.  **Refactor the `generateAiTest` Cloud Function.**
+    *   **Instruction:** The `generateAiTest` function, which can be slow, must be changed to an asynchronous workflow.
     *   **Implementation Guidance:**
         1.  **Create a New Firestore Collection:** Create a collection named `aiTestJobs` to track the status of generation requests. A document in this collection might contain fields like `status` ('pending', 'completed', 'failed'), `userId`, `topic`, `createdAt`, `completedAt`, and `resultTestId` or `error`.
-        2.  **Modify the `generateAITest` Endpoint:**
+        2.  **Modify the `generateAiTest` Endpoint:**
             *   Instead of performing the AI generation directly, the function should now:
                 *   Create a new document in the `aiTestJobs` collection with a status of 'pending'.
                 *   Immediately return a `202 Accepted` status code to the client, along with the `jobId` (which is the ID of the document just created).
@@ -136,7 +136,7 @@ Claude's plan proposes a more comprehensive and standardized structure for every
 ### Action Items:
 
 1.  **Implement Rate Limiting on Critical Endpoints.**
-    *   **Instruction:** Add rate limiting to sensitive or expensive endpoints, especially `generateAITest` and authentication endpoints.
+    *   **Instruction:** Add rate limiting to sensitive or expensive endpoints, especially `generateAiTest` and authentication endpoints.
     *   **Implementation Guidance:**
         *   For Firebase Cloud Functions, your agent should investigate using the **"Fixed-rate limiting" Firebase Extension**. This is a pre-built solution that can be configured to limit invocations per user per time interval.
         *   For Next.js API Routes hosted on Vercel, your agent can use a library like `rate-limiter-flexible` combined with a Redis store (like Vercel KV) to track request counts per IP or user ID.
