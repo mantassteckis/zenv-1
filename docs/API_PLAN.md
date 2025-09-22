@@ -141,3 +141,4 @@ Claude's plan proposes a more comprehensive and standardized structure for every
         *   For Firebase Cloud Functions, your agent should investigate using the **"Fixed-rate limiting" Firebase Extension**. This is a pre-built solution that can be configured to limit invocations per user per time interval.
         *   For Next.js API Routes hosted on Vercel, your agent can use a library like `rate-limiter-flexible` combined with a Redis store (like Vercel KV) to track request counts per IP or user ID.
         *   When a limit is exceeded, the API **must** return a `429 Too Many Requests` status code.
+        *   **IMPLEMENTATION STATUS:** ✅ Rate limiting has been implemented on the `/api/v1/tests` endpoint using `@upstash/ratelimit` with Redis. The endpoint enforces a limit of 100 requests per minute per IP address and returns proper 429 status codes with `Retry-After` headers when limits are exceeded.

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
+import { withRateLimit } from '@/lib/rate-limiter';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -20,7 +21,7 @@ const firebaseConfig = {
 
 // Initialize Firebase with error handling
 let app;
-let db;
+let db: Firestore;
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -232,9 +233,9 @@ async function handlePOST(request: NextRequest) {
   }
 }
 
-// Export the performance-monitored version
-export const POST = withPerformanceMonitoring(handlePOST, {
+// Export the performance-monitored version with rate limiting
+export const POST = withRateLimit('testSubmission', withPerformanceMonitoring(handlePOST, {
   enablePayloadTracking: true,
   slowRequestThreshold: 2000, // 2 seconds for database operations
   maxPayloadSizeToLog: 5000
-});
+}));

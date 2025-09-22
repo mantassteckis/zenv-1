@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, QueryConstraint, orderBy, limit, startAfter, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, QueryConstraint, orderBy, limit, startAfter, doc, getDoc, Firestore } from 'firebase/firestore';
 import { PreMadeTest, COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
+import { withRateLimit } from '@/lib/rate-limiter';
 
 // Initialize Firebase Client SDK for both auth and firestore operations
 const firebaseConfig = {
@@ -19,7 +20,7 @@ const firebaseConfig = {
 
 // Initialize Firebase with error handling
 let app;
-let db;
+let db: Firestore;
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -176,5 +177,5 @@ async function handleGET(request: NextRequest) {
   }
 }
 
-// Export the handler with performance monitoring
-export const GET = withPerformanceMonitoring(handleGET);
+// Export the handler with performance monitoring and rate limiting
+export const GET = withRateLimit('general', withPerformanceMonitoring(handleGET));
