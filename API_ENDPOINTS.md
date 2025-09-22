@@ -1,4 +1,101 @@
-# API Endpoints Documentation
+# API Endpoints
+
+## Firebase Cloud Functions
+
+### generateAiTest
+**Type:** Firebase Cloud Function (Callable)  
+**Purpose:** Generate AI-powered typing tests using Google Gemini AI  
+**Authentication:** Required  
+
+**Request Body:**
+```typescript
+{
+  topic: string;           // Topic for test generation
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  timeLimit?: number;      // Optional: 30, 60, 120, 300 seconds
+  saveTest: boolean;       // Whether to save to aiGeneratedTests collection
+  userInterests?: string[]; // Optional: user interests for personalization
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean;
+  text: string;           // Generated typing test content
+  testId?: string;        // ID if saved to Firestore
+  wordCount: number;      // Word count of generated text
+  saved: boolean;         // Whether test was saved
+  userInterestsIncluded: boolean;
+  message: string;
+}
+```
+
+**Error Handling:**
+- Returns HttpsError for authentication failures
+- Falls back to placeholder content if AI generation fails
+- Validates all input parameters server-side
+
+### submitTestResult
+**Type:** Firebase Cloud Function (Callable)  
+**Purpose:** Save typing test results and update user statistics  
+**Authentication:** Required  
+
+**Request Body:**
+```typescript
+{
+  wpm: number;
+  accuracy: number;
+  errors: number;
+  timeTaken: number;      // in seconds
+  textLength: number;
+  userInput: string;
+  testType: string;       // 'practice', 'ai-generated', etc.
+  difficulty: string;     // 'Easy', 'Medium', 'Hard'
+  testId?: string;        // Optional for practice tests
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+## Next.js API Routes
+
+### GET /api/tests
+**Purpose:** Fetch pre-made typing tests with filtering  
+**Authentication:** Not required  
+
+**Query Parameters:**
+- `difficulty`: 'Easy' | 'Medium' | 'Hard' (optional)
+- `timeLimit`: number (optional) - filter by time limit
+- `category`: string (optional) - filter by test category
+
+**Response:**
+```typescript
+{
+  tests: PreMadeTest[];
+}
+
+interface PreMadeTest {
+  id: string;
+  text: string;
+  difficulty: string;
+  category: string;
+  source: string;
+  wordCount: number;
+  timeLimit: number;
+}
+```
+
+### POST /api/submit-test-result
+**Purpose:** Proxy endpoint for submitTestResult Cloud Function  
+**Authentication:** Required (Authorization header)  
+**Note:** This endpoint validates auth and forwards to the Cloud Function Documentation
 
 This document tracks all API routes and Cloud Functions created for the ZenType project.
 

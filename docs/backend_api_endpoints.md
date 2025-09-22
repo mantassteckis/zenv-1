@@ -1,53 +1,124 @@
 # Backend API Endpoints
 
-This document outlines the API endpoints that will be implemented in the backend phase of the ZenType project. Currently, all frontend interactions use placeholder functionality.
+This document outlines the API endpoints implemented in the ZenType project.
 
-## Authentication Endpoints
+## ✅ IMPLEMENTED ENDPOINTS
 
-### POST /api/auth/login
-**Description:** User login with email and password
+## Firebase Cloud Functions
+
+### generateAiTest
+**Status:** ✅ FULLY IMPLEMENTED  
+**Type:** Firebase Cloud Function (Callable)  
+**Purpose:** Generate AI-powered typing tests using Google Gemini AI  
+**Authentication:** Required  
+
 **Request Body:**
-\`\`\`json
+```typescript
 {
-  "email": "string",
-  "password": "string"
+  topic: string;           // Topic for test generation
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  timeLimit?: number;      // Optional: 30, 60, 120, 300 seconds
+  saveTest: boolean;       // Whether to save to aiGeneratedTests collection
+  userInterests?: string[]; // Optional: user interests for personalization
 }
-\`\`\`
-**Response:**
-\`\`\`json
-{
-  "success": boolean,
-  "token": "string",
-  "user": {
-    "id": "string",
-    "username": "string",
-    "email": "string"
-  }
-}
-\`\`\`
+```
 
-### POST /api/auth/signup
-**Description:** New user account creation
-**Request Body:**
-\`\`\`json
-{
-  "username": "string",
-  "email": "string", 
-  "password": "string"
-}
-\`\`\`
 **Response:**
-\`\`\`json
+```typescript
 {
-  "success": boolean,
-  "token": "string",
-  "user": {
-    "id": "string",
-    "username": "string",
-    "email": "string"
-  }
+  success: boolean;
+  text: string;           // Generated typing test content
+  testId?: string;        // ID if saved to Firestore
+  wordCount: number;      // Word count of generated text
+  saved: boolean;         // Whether test was saved
+  userInterestsIncluded: boolean;
+  message: string;
 }
-\`\`\`
+```
+
+### submitTestResult
+**Status:** ✅ FULLY IMPLEMENTED  
+**Type:** Firebase Cloud Function (Callable)  
+**Purpose:** Save typing test results and update user statistics  
+**Authentication:** Required  
+
+**Request Body:**
+```typescript
+{
+  wpm: number;
+  accuracy: number;
+  errors: number;
+  timeTaken: number;      // in seconds
+  textLength: number;
+  userInput: string;
+  testType: string;       // 'practice', 'ai-generated', etc.
+  difficulty: string;     // 'Easy', 'Medium', 'Hard'
+  testId?: string;        // Optional for practice tests
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+## Next.js API Routes
+
+### GET /api/tests
+**Status:** ✅ FULLY IMPLEMENTED  
+**Purpose:** Fetch pre-made typing tests with filtering  
+**Authentication:** Not required  
+
+**Query Parameters:**
+- `difficulty`: 'Easy' | 'Medium' | 'Hard' (optional)
+- `timeLimit`: number (optional) - filter by time limit
+- `category`: string (optional) - filter by test category
+
+**Response:**
+```typescript
+{
+  tests: PreMadeTest[];
+}
+
+interface PreMadeTest {
+  id: string;
+  text: string;
+  difficulty: string;
+  category: string;
+  source: string;
+  wordCount: number;
+  timeLimit: number;
+}
+```
+
+### POST /api/submit-test-result
+**Status:** ✅ FULLY IMPLEMENTED  
+**Purpose:** Proxy endpoint for submitTestResult Cloud Function  
+**Authentication:** Required (Authorization header)  
+**Note:** This endpoint validates auth and forwards to the Cloud Function
+
+## 📋 PLANNED ENDPOINTS (Not Yet Implemented)
+
+### GET /api/leaderboard
+**Status:** 📅 PLANNED  
+**Purpose:** Fetch global leaderboard data  
+**Authentication:** Not required  
+
+**Response:**
+```typescript
+{
+  leaderboard: Array<{
+    rank: number;
+    username: string;
+    bestWpm: number;
+    testsCompleted: number;
+    averageAccuracy: number;
+  }>;
+}
+```
 
 ### POST /api/auth/google
 **Description:** Google OAuth authentication

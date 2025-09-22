@@ -46,23 +46,41 @@ This service comprises Firestore and the callable Cloud Functions that contain t
 **1. Critical Endpoints (Callable Functions):**
 These are not traditional REST endpoints but are invoked via HTTPS calls from the client SDK.
 
-*   `POST generateAITest`
+*   `POST generateAiTest`
     *   **Description**: Triggers the Genkit AI service to generate a new typing test based on a user-provided topic.
+    *   **Status**: ✅ FULLY IMPLEMENTED
+    *   **Implementation**: Firebase Cloud Function using Google Gemini AI
+    *   **Request**: `{ topic: string, difficulty: 'Easy'|'Medium'|'Hard', timeLimit?: number, saveTest: boolean, userInterests?: string[] }`
+    *   **Response**: `{ success: boolean, text: string, testId?: string, wordCount: number, saved: boolean, userInterestsIncluded: boolean, message: string }`
+    *   **Features**: Topic-based generation, difficulty customization, automatic Firestore saving, fallback content system
+
 *   `POST submitTestResult`
-    *   **Description**: Receives the results of a completed typing test, calculates metrics (WPM, accuracy), and saves it to the user's history in Firestore.
-*   `POST updateUserProfile`
-    *   **Description**: Updates a user's profile data, such as their username or application preferences.
-*   `GET getTestHistory`
-    *   **Description**: Retrieves a paginated list of a user's past test results from Firestore for the history page.
-*   `GET getLeaderboard`
-    *   **Description**: Retrieves and aggregates data to create the public leaderboard, showing top scores.
+    *   **Description**: Securely saves typing test results and updates user statistics.
+    *   **Status**: ✅ FULLY IMPLEMENTED  
+    *   **Implementation**: Firebase Cloud Function with Firestore transactions
+    *   **Request**: `{ wpm: number, accuracy: number, errors: number, timeTaken: number, textLength: number, userInput: string, testType: string, difficulty: string, testId?: string }`
+    *   **Response**: `{ success: boolean, message: string }`
+    *   **Features**: Server-side validation, user stats updates, secure data persistence
 
-**2. Complex Business Logic:**
-*   **`submitTestResult`**: This function executes significant business logic beyond a simple database write. It processes a raw `charHistory` array (containing every keystroke and its timing) to calculate final metrics like Words Per Minute (WPM), raw WPM, accuracy, and consistency. It then structures this data into a `TestResult` object and saves it to a subcollection under the user's profile.
-*   **`generateAITest`**: This function orchestrates a call to the external AI service. It involves prompt engineering (crafting the request to the LLM), defining the expected output structure with a Zod schema for validation, and handling potential errors or malformed responses from the AI before saving the validated test to the `aiGeneratedTests` collection.
+**2. Next.js API Routes:**
+*   `GET /api/tests`
+    *   **Description**: Fetches pre-made typing tests with filtering capabilities.
+    *   **Status**: ✅ FULLY IMPLEMENTED
+    *   **Query Parameters**: `difficulty`, `timeLimit`, `category`
+    *   **Response**: `{ tests: PreMadeTest[] }`
+    *   **Features**: Smart Firestore filtering, category-based organization, 48+ professional tests
 
-**3. Asynchronous Operations:**
-*   The `generateAITest` function is a potentially long-running operation. The current architecture handles this **synchronously**, meaning the client waits for the function to complete. A more scalable, asynchronous approach would involve the function immediately returning a `202 Accepted` with a `taskId`. The client would then either poll a status endpoint (`GET /api/test/status/{taskId}`) or listen for real-time updates via a WebSocket or a Firestore document listener to get the result when it's ready.
+*   `POST /api/submit-test-result`
+    *   **Description**: Proxy endpoint for submitTestResult Cloud Function with authentication validation.
+    *   **Status**: ✅ FULLY IMPLEMENTED
+    *   **Features**: Auth token validation, secure forwarding to Cloud Function
+
+**3. Complex Business Logic:**
+*   **`submitTestResult`**: ✅ FULLY IMPLEMENTED - This function executes significant business logic beyond a simple database write. It processes test results, calculates metrics (WPM, accuracy), validates data server-side, and performs atomic Firestore transactions to save results and update user statistics.
+*   **`generateAiTest`**: ✅ FULLY IMPLEMENTED - This function orchestrates calls to Google Gemini AI service. It involves prompt engineering, difficulty-based content generation, Zod schema validation, error handling with fallback content, and automatic saving to the `aiGeneratedTests` collection.
+
+**4. Asynchronous Operations:**
+*   All current endpoints operate synchronously with immediate responses. The `generateAiTest` function includes proper timeout handling and fallback mechanisms for reliable operation.
 
 #### B. Data Models & Payloads
 
