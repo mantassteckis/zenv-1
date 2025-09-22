@@ -84,33 +84,21 @@ export default function TestPage() {
 
   // Add sample debug logs for testing the enhanced debugger
   useEffect(() => {
-    if (debugLogger.isDebugEnabled && isMounted) {
-      debugLogger.info('UI', 'Test page component mounted', { 
-        timestamp: Date.now(),
-        component: 'TestPage',
-        route: '/test',
-        userAuthenticated: !!user
-      });
-      debugLogger.debug('PERFORMANCE', 'Component render time measured', { 
-        renderTime: '45ms',
-        componentSize: '2.3KB',
-        memoryUsage: '12MB'
-      });
-      debugLogger.warn('AUTH', 'Session will expire soon', { 
-        expiresIn: '5 minutes',
-        userId: user?.uid,
-        lastActivity: new Date().toISOString()
-      });
-      debugLogger.error('API', 'Failed to fetch user preferences', { 
-        error: 'Network timeout',
-        endpoint: '/api/user/preferences',
-        retryCount: 3
-      });
-      debugLogger.critical('SYSTEM', 'Critical system error detected', {
-        errorCode: 'SYS_001',
-        severity: 'high',
-        affectedUsers: 1
-      });
+    if (debugLogger.isDebugEnabled && isMounted && process.env.NODE_ENV === 'development') {
+      // Only log once when component mounts, not repeatedly
+      const hasLoggedMount = sessionStorage.getItem('test-page-mount-logged');
+      if (!hasLoggedMount) {
+        // Use setTimeout to avoid blocking the main thread and prevent infinite loops
+        setTimeout(() => {
+          debugLogger.info('UI', 'Test page component mounted', { 
+            timestamp: Date.now(),
+            component: 'TestPage',
+            route: '/test',
+            userAuthenticated: !!user
+          });
+          sessionStorage.setItem('test-page-mount-logged', 'true');
+        }, 100);
+      }
     }
   }, [debugLogger, isMounted, user]);
 
@@ -213,20 +201,49 @@ export default function TestPage() {
     }
   }, [activeTab, selectedTestId, aiTest]);
 
-  // Test selection handler
+  // Enhanced Practice Test Selection Handler with comprehensive tracking
   const handleTestSelection = useCallback((test: PreMadeTest) => {
-    console.log('🎯 Test selected:', test.id, 'Source:', test.source, 'WordCount:', test.wordCount);
-    console.log('📝 Test text preview:', test.text.substring(0, 100) + '...');
-    
+    // Start comprehensive flow tracking for practice test selection
+    const flowId = debugLogger.startFlow('PRACTICE_TEST', 'Practice Test Selection Process', {
+      component: 'TestPage',
+      action: 'select_practice_test',
+      testType: 'practice'
+    });
+
+    debugLogger.logUserInteraction('clicked', 'Practice Test Card', {
+      testId: test.id,
+      testSource: test.source,
+      testDifficulty: test.difficulty,
+      wordCount: test.wordCount
+    });
+
+    debugLogger.addToFlow(flowId, 'info', 'Practice test selection initiated', {
+      testId: test.id,
+      source: test.source,
+      difficulty: test.difficulty,
+      wordCount: test.wordCount,
+      category: test.category,
+      textLength: test.text.length
+    });
+
     // Update selected test ID
     setSelectedTestId(test.id);
+    debugLogger.addToFlow(flowId, 'debug', 'Selected test ID updated in state', {
+      selectedTestId: test.id
+    });
     
     // Update the text to type with selected test content - THIS IS CRITICAL
     setTextToType(test.text);
-    console.log('✍️ textToType updated to selected test content');
+    debugLogger.addToFlow(flowId, 'info', 'Test text content loaded', {
+      textLength: test.text.length,
+      textPreview: test.text.substring(0, 100) + '...'
+    });
     
     // Update current test ID (critical for result saving)
     setCurrentTestId(test.id);
+    debugLogger.addToFlow(flowId, 'debug', 'Current test ID updated for result tracking', {
+      currentTestId: test.id
+    });
     
     // Clear any existing user input and reset typing state
     setUserInput("");
@@ -234,16 +251,42 @@ export default function TestPage() {
     setErrors(0);
     setStatus('waiting');
     
+    debugLogger.addToFlow(flowId, 'info', 'Typing state reset for new test', {
+      userInput: '',
+      currentIndex: 0,
+      errors: 0,
+      status: 'waiting'
+    });
+    
     // Reset time based on selected time (not test's recommended time for now)
     setTimeLeft(selectedTime);
-    
-    console.log('✅ Test selection complete. Current textToType length:', test.text.length);
-    console.log('🚀 Ready to start typing the selected test.');
-  }, [selectedTime]);
+    debugLogger.addToFlow(flowId, 'debug', 'Timer configured', {
+      timeLimit: selectedTime,
+      testRecommendedTime: test.timeLimit
+    });
+
+    // End the flow successfully
+    debugLogger.endFlow(flowId, true, {
+      testId: test.id,
+      testSource: test.source,
+      textLength: test.text.length,
+      wordCount: test.wordCount,
+      ready: true
+    });
+
+    console.log('✅ Practice test selection complete. Ready to start typing.');
+  }, [selectedTime, debugLogger]);
 
   // AI Test Generation Handler
   const handleGenerateAiTest = useCallback(async () => {
-    debugLogger.info('AI_GENERATION', 'Starting AI test generation process', {
+    // Start comprehensive flow tracking for AI test generation
+    const flowId = debugLogger.startFlow('AI_GENERATION', 'AI Test Generation Process', {
+      component: 'TestPage',
+      action: 'generate_ai_test',
+      testType: 'ai'
+    });
+
+    debugLogger.addToFlow(flowId, 'info', 'User initiated AI test generation', {
       hasUser: !!user,
       topic: topic.trim(),
       userInterests: profile?.interests || [],
@@ -251,25 +294,34 @@ export default function TestPage() {
       selectedTime
     }, 'app/test/page.tsx:handleGenerateAiTest');
 
+    // Log user interaction
+    debugLogger.logUserInteraction('clicked', 'AI Generate Button', {
+      topic: topic.trim(),
+      difficulty: selectedDifficulty,
+      timeLimit: selectedTime
+    });
+
     if (!user) {
-      debugLogger.error('AI_GENERATION', 'User not authenticated', { user }, 'app/test/page.tsx:handleGenerateAiTest');
+      debugLogger.addToFlow(flowId, 'error', 'Authentication check failed - user not authenticated', { user });
+      debugLogger.endFlow(flowId, false, { error: 'User not authenticated' });
       alert('Please sign in to generate AI tests');
       return;
     }
 
     if (!topic.trim()) {
-      debugLogger.warn('AI_GENERATION', 'Topic is empty or whitespace only', { topic }, 'app/test/page.tsx:handleGenerateAiTest');
+      debugLogger.addToFlow(flowId, 'warn', 'Input validation failed - empty topic', { topic });
+      debugLogger.endFlow(flowId, false, { error: 'Empty topic provided' });
       alert('Please enter a topic for the AI test');
       return;
     }
 
-    debugLogger.info('AI_GENERATION', 'Input validation passed, starting generation', {
+    debugLogger.addToFlow(flowId, 'info', 'Input validation passed, proceeding with generation', {
       userId: user.uid,
       topicLength: topic.trim().length,
       userInterests: profile?.interests || [],
       difficulty: selectedDifficulty,
       timeLimit: selectedTime
-    }, 'app/test/page.tsx:handleGenerateAiTest');
+    });
 
     setIsGenerating(true);
     setAiTest(null);
@@ -278,13 +330,13 @@ export default function TestPage() {
       // Get user's autoSaveAiTests preference (default to false)
       const autoSaveAiTests = profile?.settings?.autoSaveAiTests || false;
       
-      debugLogger.info('AI_GENERATION', 'Retrieved user preferences', {
+      debugLogger.addToFlow(flowId, 'info', 'Retrieved user preferences', {
         userId: user.uid,
         autoSaveAiTests,
         hasProfile: !!profile,
         hasSettings: !!profile?.settings,
         userInterests: profile?.interests || []
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+      });
 
       // Prepare request data
       const requestData = {
@@ -295,46 +347,90 @@ export default function TestPage() {
         userInterests: profile?.interests || []
       };
 
-      debugLogger.info('AI_GENERATION', 'Preparing to call Cloud Function', {
-        requestData
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+      debugLogger.addToFlow(flowId, 'info', 'Request data prepared for Cloud Function', {
+        requestDataKeys: Object.keys(requestData),
+        topicLength: requestData.topic.length,
+        hasUserInterests: requestData.userInterests.length > 0,
+        saveTest: requestData.saveTest
+      });
 
       // Call the Cloud Function
       const generateAiTest = httpsCallable(functions, 'generateAiTest');
       
-      debugLogger.debug('AI_GENERATION', 'Calling Cloud Function', {
+      debugLogger.addToFlow(flowId, 'info', 'Initiating Cloud Function call', {
+        functionName: 'generateAiTest',
         topic: requestData.topic,
         difficulty: requestData.difficulty,
         timeLimit: requestData.timeLimit,
-        userInterests: requestData.userInterests
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+        userInterestsCount: requestData.userInterests.length
+      });
 
+      // Log API call
+      debugLogger.logApiCall('POST', 'generateAiTest', requestData);
+
+      const callStartTime = Date.now();
+      
       // Call the Cloud Function
       const result = await generateAiTest(requestData);
       const data = result.data as any;
+      
+      const callDuration = Date.now() - callStartTime;
 
-      debugLogger.info('AI_GENERATION', 'Cloud Function response received', {
+      debugLogger.addToFlow(flowId, 'info', 'Cloud Function response received', {
         success: data?.success,
         textLength: data?.text?.length || 0,
         wordCount: data?.wordCount || 0,
-        testId: data?.testId || 'unknown'
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+        testId: data?.testId || 'unknown',
+        callDuration,
+        responseSize: JSON.stringify(data).length
+      });
+
+      // Log API response
+      debugLogger.logApiCall('POST', 'generateAiTest', { 
+        responseData: data, 
+        duration: callDuration 
+      }, data?.success !== false);
       
-      debugLogger.debug('AI_GENERATION', 'Processing generated text', {
+      debugLogger.addToFlow(flowId, 'debug', 'Processing generated text data', {
         dataType: typeof data,
-        dataKeys: Object.keys(data),
+        dataKeys: Object.keys(data || {}),
         hasText: !!(data?.text),
         textLength: data?.text?.length || 0,
         hasTestId: !!(data?.testId),
+        hasJobId: !!(data?.jobId),
         success: data?.success
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+      });
 
-      // If there's a local text generation fallback, use a different variable name
-      // const data = { ... } // This line causes the duplicate variable error
-      // Use localData instead if you need a fallback
+      // Handle job-based response (async generation)
+      if (data.jobId && data.status === 'pending') {
+        debugLogger.addToFlow(flowId, 'info', 'Received job-based response, handling async generation', {
+          jobId: data.jobId,
+          status: data.status,
+          estimatedTime: data.estimatedCompletionTime
+        });
 
+        // For now, show a message that generation is in progress
+        // TODO: Implement proper job polling or Firestore listener
+        debugLogger.addToFlow(flowId, 'warn', 'Job-based AI generation not fully implemented yet', {
+          jobId: data.jobId,
+          message: 'This feature requires job polling implementation'
+        });
+        
+        debugLogger.endFlow(flowId, false, { 
+          error: 'Job-based generation not implemented',
+          jobId: data.jobId 
+        });
+        
+        throw new Error('AI test generation is processing. This feature will be available soon.');
+      }
+
+      // Handle immediate text response (synchronous generation)
       if (!data.text) {
-        debugLogger.error('AI_GENERATION', 'No text content generated', { data }, 'app/test/page.tsx:handleGenerateAiTest');
+        debugLogger.addToFlow(flowId, 'error', 'No text content generated from Cloud Function', { 
+          data,
+          responseKeys: Object.keys(data || {})
+        });
+        debugLogger.endFlow(flowId, false, { error: 'No text content generated' });
         throw new Error('No text content generated');
       }
 
@@ -351,31 +447,44 @@ export default function TestPage() {
         saved: data.saved || false
       };
 
-      debugLogger.info('AI_GENERATION', 'Generated test object created', {
+      debugLogger.addToFlow(flowId, 'info', 'Generated test object created successfully', {
         testId: generatedTest.id,
         textLength: generatedTest.text.length,
         wordCount: generatedTest.wordCount,
         saved: generatedTest.saved,
-        category: generatedTest.category
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+        category: generatedTest.category,
+        textPreview: generatedTest.text.substring(0, 100) + '...'
+      });
 
       console.log('🤖 AI-generated text preview:', data.text.substring(0, 100) + '...');
       
       setAiTest(generatedTest);
-      console.log('✅ AI test object created and set to state');
+      debugLogger.addToFlow(flowId, 'info', 'AI test object set to component state', {
+        stateUpdated: true
+      });
       
       // Auto-select the AI test for better UX (user doesn't need to click the card)
       console.log('🤖 Auto-selecting the generated AI test');
       setTextToType(generatedTest.text);
       setCurrentTestId(generatedTest.id);
-      console.log('🤖 AI test auto-selected with text length:', generatedTest.text.length);
-      debugLogger.info('AI_GENERATION', 'AI test generation completed successfully', {
-        testReady: true,
-        testId: generatedTest.id
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+      
+      debugLogger.addToFlow(flowId, 'info', 'AI test auto-selected for user', {
+        testId: generatedTest.id,
+        textLength: generatedTest.text.length,
+        autoSelected: true
+      });
+
+      // End the flow successfully
+      debugLogger.endFlow(flowId, true, {
+        testId: generatedTest.id,
+        textLength: generatedTest.text.length,
+        wordCount: generatedTest.wordCount,
+        saved: generatedTest.saved,
+        totalDuration: Date.now() - (flowId ? parseInt(flowId.split('_')[1]) : Date.now())
+      });
 
     } catch (error: any) {
-      debugLogger.critical('AI_GENERATION', 'AI test generation failed', {
+      debugLogger.addToFlow(flowId, 'critical', 'AI test generation failed with error', {
         errorMessage: error?.message || 'Unknown error',
         errorCode: error?.code,
         errorDetails: error?.details,
@@ -383,34 +492,55 @@ export default function TestPage() {
         userId: user?.uid,
         topic: topic.trim(),
         difficulty: selectedDifficulty
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+      });
+
+      // End the flow with failure
+      debugLogger.endFlow(flowId, false, {
+        error: error?.message || 'Unknown error',
+        errorCode: error?.code,
+        errorDetails: error?.details
+      });
 
       // Show user-friendly error message
       const userMessage = error?.message || 'Unknown error occurred during test generation';
       alert(`Failed to generate test: ${userMessage}`);
     } finally {
       setIsGenerating(false);
-      debugLogger.debug('AI_GENERATION', 'AI generation process ended', {
-        isGenerating: false
-      }, 'app/test/page.tsx:handleGenerateAiTest');
+      debugLogger.addToFlow(flowId, 'info', 'AI generation process cleanup completed', {
+        isGenerating: false,
+        finalState: 'cleanup_complete'
+      });
     }
   }, [user, topic, selectedDifficulty, selectedTime, debugLogger]);
 
-  // AI Test Selection Handler
+  // Enhanced AI Test Selection Handler with tracking
   const handleAiTestSelection = useCallback(() => {
-    console.log('🤖 AI TEST CARD CLICKED - Selection started', { 
+    const flowId = debugLogger.startFlow('AI_GENERATION', 'AI Test Selection Process', {
+      component: 'TestPage',
+      action: 'select_ai_test',
+      testType: 'ai'
+    });
+
+    debugLogger.logUserInteraction('clicked', 'AI Test Card', {
+      hasAiTest: !!aiTest,
+      testId: aiTest?.id,
+      currentTab: activeTab
+    });
+
+    debugLogger.addToFlow(flowId, 'info', 'AI test selection initiated', { 
       hasAiTest: !!aiTest, 
       testId: aiTest?.id,
-      currentTab: activeTab,
-      timestamp: new Date().toISOString()
+      currentTab: activeTab
     });
 
     if (!aiTest) {
+      debugLogger.addToFlow(flowId, 'warn', 'No AI test available for selection');
+      debugLogger.endFlow(flowId, false, { error: 'No AI test available' });
       console.warn('❌ CRITICAL: No AI test available for selection');
       return;
     }
 
-    console.log('🔍 BEFORE TEXT UPDATE - Current state:', {
+    debugLogger.addToFlow(flowId, 'debug', 'AI test data validation', {
       aiTestId: aiTest.id,
       aiTestTopic: aiTest.topic,
       aiTextLength: aiTest.text?.length,
@@ -512,10 +642,16 @@ export default function TestPage() {
     setFinalWpm(wpm);
     setFinalAccuracy(accuracy);
 
-    // Save test result using Cloud Function if user is authenticated
+    // Save test result using API route if user is authenticated
     if (user) {
+      // Start comprehensive flow tracking for test submission
+      const flowId = debugLogger.startFlow('TEST_SUBMISSION', 'Test Result Submission Process', {
+        component: 'TestPage',
+        action: 'submit_test_result',
+        testType: activeTab === 'ai' ? 'ai' : 'practice'
+      });
+
       try {
-        
         const testResultData = {
           wpm: wpm,
           accuracy: accuracy,
@@ -527,29 +663,34 @@ export default function TestPage() {
           difficulty: selectedDifficulty || 'Medium', // Ensure difficulty has a default and matches expected values
           testId: currentTestId || `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure testId exists and is unique
         };
-        
-        console.log('💾 SUBMITTING TEST RESULT via API route:', {
-          ...testResultData,
+
+        debugLogger.addToFlow(flowId, 'info', 'Test result data prepared for submission', {
+          wpm,
+          accuracy,
+          errors,
+          timeTaken,
+          textLength: textToType.length,
+          testType: testResultData.testType,
+          difficulty: testResultData.difficulty,
+          testId: testResultData.testId,
           isAiGenerated: activeTab === 'ai',
           hasAiTest: !!aiTest,
           aiTestId: aiTest?.id,
           aiTestTopic: aiTest?.topic
         });
-        console.log('Validation check - all values are valid:', {
-          wpm: typeof wpm === 'number' && !isNaN(wpm),
-          accuracy: typeof accuracy === 'number' && !isNaN(accuracy),
-          errors: typeof errors === 'number' && !isNaN(errors),
-          timeTaken: typeof timeTaken === 'number' && !isNaN(timeTaken),
-          textLength: typeof textToType.length === 'number' && !isNaN(textToType.length)
+
+        debugLogger.addToFlow(flowId, 'debug', 'Data validation check', {
+          wpmValid: typeof wpm === 'number' && !isNaN(wpm),
+          accuracyValid: typeof accuracy === 'number' && !isNaN(accuracy),
+          errorsValid: typeof errors === 'number' && !isNaN(errors),
+          timeTakenValid: typeof timeTaken === 'number' && !isNaN(timeTaken),
+          textLengthValid: typeof textToType.length === 'number' && !isNaN(textToType.length)
         });
-        console.log('Raw calculation values:', {
-          selectedTime,
-          timeLeft,
-          timeTaken,
-          userInputLength: userInput.length,
-          errors,
-          textToTypeLength: textToType.length
-        });
+
+        // Log API call
+        debugLogger.logApiCall('POST', '/api/submit-test-result', testResultData);
+        
+        const callStartTime = Date.now();
         
         // Call the Next.js API route instead of Cloud Function
         const response = await fetch('/api/submit-test-result', {
@@ -561,18 +702,69 @@ export default function TestPage() {
           body: JSON.stringify(testResultData)
         });
         
+        const callDuration = Date.now() - callStartTime;
+        
         const result = await response.json();
+
+        debugLogger.addToFlow(flowId, 'info', 'API response received', {
+          success: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+          callDuration,
+          responseSize: JSON.stringify(result).length
+        });
+
+        // Log API response
+        debugLogger.logApiCall('POST', '/api/submit-test-result', { 
+          responseData: result, 
+          duration: callDuration 
+        }, response.ok);
         
         if (!response.ok) {
+          debugLogger.addToFlow(flowId, 'error', 'API request failed', {
+            status: response.status,
+            statusText: response.statusText,
+            error: result.error || 'Unknown error'
+          });
+          debugLogger.endFlow(flowId, false, {
+            error: result.error || 'Failed to save test result',
+            status: response.status
+          });
           throw new Error(result.error || 'Failed to save test result');
         }
-        
+
+        debugLogger.addToFlow(flowId, 'info', 'Test result submitted successfully', {
+          resultId: result.id || 'unknown',
+          saved: true,
+          testType: testResultData.testType
+        });
+
+        // End the flow successfully
+        debugLogger.endFlow(flowId, true, {
+          resultId: result.id || 'unknown',
+          wpm,
+          accuracy,
+          testType: testResultData.testType,
+          saved: true
+        });
+
         console.log('Test result submitted successfully:', result);
         
         // Show success feedback to user
         // TODO: Add toast notification for better UX
         
       } catch (error) {
+        debugLogger.addToFlow(flowId, 'critical', 'Test submission failed with error', {
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorCode: error instanceof Error ? (error as any).code : undefined,
+          errorDetails: error instanceof Error ? (error as any).details : undefined
+        });
+
+        debugLogger.endFlow(flowId, false, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          errorCode: error instanceof Error ? (error as any).code : undefined
+        });
+
         console.error('Error submitting test result:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Error details:', {
@@ -586,6 +778,12 @@ export default function TestPage() {
         alert(`Failed to save test result: ${errorMessage}. Please try again.`);
       }
     } else {
+      debugLogger.info('TEST_SUBMISSION', 'User not authenticated - skipping test result submission', {
+        hasUser: false,
+        testType: activeTab === 'ai' ? 'ai' : 'practice',
+        wpm,
+        accuracy
+      });
       console.log('User not authenticated, not saving test result');
     }
 

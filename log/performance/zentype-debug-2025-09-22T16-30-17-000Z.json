@@ -1,0 +1,326 @@
+{
+  "sessionId": "debug_1758558259942_20064rrfx",
+  "exportedAt": "2025-09-22T16:30:17.000Z",
+  "debugEnabled": true,
+  "categoryFilter": "ALL",
+  "totalLogs": 15,
+  "filteredLogs": 15,
+  "logs": [
+    {
+      "id": "log_1758558335933_16",
+      "timestamp": 1758558335933,
+      "level": "info",
+      "category": "DEBUG_SYSTEM",
+      "message": "Logs cleared",
+      "data": {
+        "clearedAt": "2025-09-22T16:25:35.933Z"
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "metadata": {
+        "url": "http://localhost:3001/history",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_17",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "AI_GENERATION",
+      "message": "🚀 Flow started: AI Test Generation Process",
+      "data": {
+        "flowStart": true
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "component": "TestPage",
+        "action": "generate_ai_test",
+        "testType": "ai",
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_18",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "User initiated AI test generation",
+      "data": {
+        "hasUser": true,
+        "topic": "china ai company",
+        "userInterests": [],
+        "selectedDifficulty": "Medium",
+        "selectedTime": 60
+      },
+      "location": "app/test/page.tsx:handleGenerateAiTest",
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_19",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "USER_INTERACTION",
+      "message": "User clicked",
+      "data": {
+        "topic": "china ai company",
+        "difficulty": "Medium",
+        "timeLimit": 60
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "metadata": {
+        "component": "AI Generate Button",
+        "action": "clicked",
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_20",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "Input validation passed, proceeding with generation",
+      "data": {
+        "userId": "WXg0podKiCMjLWmI38qkYk1P0Id2",
+        "topicLength": 16,
+        "userInterests": [],
+        "difficulty": "Medium",
+        "timeLimit": 60
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_21",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "Retrieved user preferences",
+      "data": {
+        "userId": "WXg0podKiCMjLWmI38qkYk1P0Id2",
+        "autoSaveAiTests": true,
+        "hasProfile": true,
+        "hasSettings": true,
+        "userInterests": []
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_22",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "Request data prepared for Cloud Function",
+      "data": {
+        "requestDataKeys": [
+          "topic",
+          "difficulty",
+          "timeLimit",
+          "saveTest",
+          "userInterests"
+        ],
+        "topicLength": 16,
+        "hasUserInterests": false,
+        "saveTest": true
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_23",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "Initiating Cloud Function call",
+      "data": {
+        "functionName": "generateAiTest",
+        "topic": "china ai company",
+        "difficulty": "Medium",
+        "timeLimit": 60,
+        "userInterestsCount": 0
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558353827_24",
+      "timestamp": 1758558353827,
+      "level": "info",
+      "category": "API",
+      "message": "POST generateAiTest",
+      "data": {
+        "topic": "china ai company",
+        "difficulty": "Medium",
+        "timeLimit": 60,
+        "saveTest": true,
+        "userInterests": []
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "metadata": {
+        "action": "api_call",
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558358053_25",
+      "timestamp": 1758558358053,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "Cloud Function response received",
+      "data": {
+        "success": true,
+        "textLength": 0,
+        "wordCount": 0,
+        "testId": "unknown",
+        "callDuration": 4226,
+        "responseSize": 207
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558358053_26",
+      "timestamp": 1758558358053,
+      "level": "info",
+      "category": "API",
+      "message": "POST generateAiTest",
+      "data": {
+        "responseData": {
+          "success": true,
+          "jobId": "ai-test-1758558356347-tgndwsffm",
+          "status": "pending",
+          "message": "AI test generation job created successfully. Use the jobId to check status.",
+          "estimatedCompletionTime": "30-60 seconds"
+        },
+        "duration": 4226
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "metadata": {
+        "action": "api_call",
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558358053_27",
+      "timestamp": 1758558358053,
+      "level": "debug",
+      "category": "SYSTEM",
+      "message": "Processing generated text data",
+      "data": {
+        "dataType": "object",
+        "dataKeys": [
+          "success",
+          "jobId",
+          "status",
+          "message",
+          "estimatedCompletionTime"
+        ],
+        "hasText": false,
+        "textLength": 0,
+        "hasTestId": false,
+        "success": true
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558358053_28",
+      "timestamp": 1758558358053,
+      "level": "error",
+      "category": "SYSTEM",
+      "message": "No text content generated from Cloud Function",
+      "data": {
+        "data": {
+          "success": true,
+          "jobId": "ai-test-1758558356347-tgndwsffm",
+          "status": "pending",
+          "message": "AI test generation job created successfully. Use the jobId to check status.",
+          "estimatedCompletionTime": "30-60 seconds"
+        },
+        "responseKeys": [
+          "success",
+          "jobId",
+          "status",
+          "message",
+          "estimatedCompletionTime"
+        ]
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558358054_29",
+      "timestamp": 1758558358054,
+      "level": "critical",
+      "category": "SYSTEM",
+      "message": "AI test generation failed with error",
+      "data": {
+        "errorMessage": "No text content generated",
+        "stack": "Error: No text content generated\n    at TestPage.useCallback[handleGenerateAiTest] (webpack-internal:///(app-pages-browser)/./app/test/page.tsx:422:27)",
+        "userId": "WXg0podKiCMjLWmI38qkYk1P0Id2",
+        "topic": "china ai company",
+        "difficulty": "Medium"
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    },
+    {
+      "id": "log_1758558360421_30",
+      "timestamp": 1758558360421,
+      "level": "info",
+      "category": "SYSTEM",
+      "message": "AI generation process cleanup completed",
+      "data": {
+        "isGenerating": false,
+        "finalState": "cleanup_complete"
+      },
+      "sessionId": "debug_1758558259942_20064rrfx",
+      "flowId": "flow_1758558353826_rwk0yw13h",
+      "metadata": {
+        "url": "http://localhost:3001/test",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+      }
+    }
+  ]
+}
