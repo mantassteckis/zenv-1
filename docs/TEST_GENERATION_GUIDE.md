@@ -4,6 +4,8 @@
 
 This guide provides complete instructions for generating new typing test categories and integrating them seamlessly into the ZenType ecosystem. Follow this guide to create professional-quality tests that maintain consistency with existing functionality.
 
+**Current Status:** AI-powered test generation is fully operational. This guide covers both manual test creation and AI-assisted generation workflows.
+
 ---
 
 ## 📊 **Current System Architecture**
@@ -19,6 +21,12 @@ This guide provides complete instructions for generating new typing test categor
 2. **Customer Support - VPN** (customer_support) - Technical support, troubleshooting
 3. **Business & Finance** (business_finance) - Corporate communications, financial analysis
 4. **Health & Medical** (health_medical) - Healthcare terminology, medical procedures
+
+### **AI Generation System** ✅
+- **Status**: Fully operational
+- **Endpoint**: `generateAiTest` Cloud Function
+- **Features**: Custom topic generation, difficulty scaling, word count targeting
+- **Integration**: Seamless frontend integration with real-time generation
 
 ---
 
