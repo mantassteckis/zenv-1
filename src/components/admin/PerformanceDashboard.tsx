@@ -107,12 +107,12 @@ export function PerformanceDashboard({ className }: PerformanceDashboardProps) {
 
       // Fetch both performance logs and stats
       const [logsResponse, statsResponse] = await Promise.all([
-        fetch(`/api/admin/logs/search?` + new URLSearchParams({
+        fetch(`/api/v1/admin/logs/search?` + new URLSearchParams({
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           pageSize: '500'
         })),
-        fetch(`/api/admin/performance/stats?timeRange=${timeRange}&_t=${Date.now()}`, {
+        fetch(`/api/v1/admin/performance/stats?timeRange=${timeRange}&_t=${Date.now()}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

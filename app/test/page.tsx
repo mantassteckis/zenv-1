@@ -24,7 +24,7 @@ interface TypingCustomization {
   font: string
 }
 
-export default function TestPage() {
+export default function TestPage(): JSX.Element | null {
   // Auth and user data
   const { user, profile, isLoading } = useAuth();
   
@@ -69,6 +69,17 @@ export default function TestPage() {
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
   const [testsLoading, setTestsLoading] = useState(false);
   const [testsError, setTestsError] = useState<string | null>(null);
+  
+  // Pagination state for tests
+  const [testsPagination, setTestsPagination] = useState<{
+    nextCursor: string | null;
+    hasNextPage: boolean;
+    loading: boolean;
+  }>({
+    nextCursor: null,
+    hasNextPage: false,
+    loading: false
+  });
 
   // AI-generated tests state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -119,14 +130,24 @@ export default function TestPage() {
 
   // Fetch pre-made tests from API
   useEffect(() => {
-    const fetchTests = async () => {
+    const fetchTests = async (loadMore = false) => {
       // Only fetch for practice tests
       if (activeTab !== 'practice') {
         return;
       }
 
-      setTestsLoading(true);
-      setTestsError(null);
+      if (loadMore) {
+        setTestsPagination(prev => ({ ...prev, loading: true }));
+      } else {
+        setTestsLoading(true);
+        setTestsError(null);
+        setPreMadeTests([]);
+        setTestsPagination({
+          nextCursor: null,
+          hasNextPage: false,
+          loading: false
+        });
+      }
       
       try {
         // Construct query string with current filters
@@ -140,9 +161,15 @@ export default function TestPage() {
           queryParams.append('timeLimit', selectedTime.toString());
         }
 
+        // Add pagination parameters
+        queryParams.append('limit', '20');
+        if (loadMore && testsPagination.nextCursor) {
+          queryParams.append('cursor', testsPagination.nextCursor);
+        }
+
         console.log(`🔍 Fetching tests with params: ${queryParams.toString()}`);
         
-        const response = await fetch(`/api/tests?${queryParams.toString()}`, {
+        const response = await fetch(`/api/v1/tests?${queryParams.toString()}`, {
           headers: getHeaders()
         });
         
@@ -156,20 +183,132 @@ export default function TestPage() {
           throw new Error(data.error);
         }
         
-        console.log(`✅ Fetched ${data.tests?.length || 0} pre-made tests`);
-        setPreMadeTests(data.tests || []);
+        console.log(`✅ Fetched ${data.data?.length || 0} pre-made tests`);
+        
+        // Handle paginated response format
+        const newTests = data.data || [];
+        const pagination = data.pagination || { nextCursor: null, hasNextPage: false };
+        
+        if (loadMore) {
+          setPreMadeTests(prev => [...prev, ...newTests]);
+        } else {
+          setPreMadeTests(newTests);
+        }
+        
+        setTestsPagination({
+          nextCursor: pagination.nextCursor,
+          hasNextPage: pagination.hasNextPage,
+          loading: false
+        });
         
       } catch (error) {
         console.error('❌ Error fetching pre-made tests:', error);
         setTestsError(error instanceof Error ? error.message : 'Failed to load tests');
-        setPreMadeTests([]);
+        if (!loadMore) {
+          setPreMadeTests([]);
+        }
+        setTestsPagination(prev => ({ ...prev, loading: false }));
       } finally {
-        setTestsLoading(false);
+        if (!loadMore) {
+          setTestsLoading(false);
+        }
       }
     };
 
     fetchTests();
   }, [selectedDifficulty, selectedTime, activeTab]); // Now filtering by both difficulty and time
+
+  // Load more tests function
+  const loadMoreTests = () => {
+    if (testsPagination.hasNextPage && !testsPagination.loading) {
+      const fetchTests = async (loadMore = false) => {
+        // Only fetch for practice tests
+        if (activeTab !== 'practice') {
+          return;
+        }
+
+        if (loadMore) {
+          setTestsPagination(prev => ({ ...prev, loading: true }));
+        } else {
+          setTestsLoading(true);
+          setTestsError(null);
+          setPreMadeTests([]);
+          setTestsPagination({
+            nextCursor: null,
+            hasNextPage: false,
+            loading: false
+          });
+        }
+        
+        try {
+          // Construct query string with current filters
+          const queryParams = new URLSearchParams();
+          
+          if (selectedDifficulty) {
+            queryParams.append('difficulty', selectedDifficulty);
+          }
+          
+          if (selectedTime) {
+            queryParams.append('timeLimit', selectedTime.toString());
+          }
+
+          // Add pagination parameters
+          queryParams.append('limit', '20');
+          if (loadMore && testsPagination.nextCursor) {
+            queryParams.append('cursor', testsPagination.nextCursor);
+          }
+
+          console.log(`🔍 Fetching tests with params: ${queryParams.toString()}`);
+          
+          const response = await fetch(`/api/v1/tests?${queryParams.toString()}`, {
+            headers: getHeaders()
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          console.log(`✅ Fetched ${data.data?.length || 0} pre-made tests`);
+          
+          // Handle paginated response format
+          const newTests = data.data || [];
+          const pagination = data.pagination || { nextCursor: null, hasNextPage: false };
+          
+          if (loadMore) {
+            setPreMadeTests(prev => [...prev, ...newTests]);
+          } else {
+            setPreMadeTests(newTests);
+          }
+          
+          setTestsPagination({
+            nextCursor: pagination.nextCursor,
+            hasNextPage: pagination.hasNextPage,
+            loading: false
+          });
+          
+        } catch (error) {
+          console.error('❌ Error fetching pre-made tests:', error);
+          setTestsError(error instanceof Error ? error.message : 'Failed to load tests');
+          if (!loadMore) {
+            setPreMadeTests([]);
+          }
+          setTestsPagination(prev => ({ ...prev, loading: false }));
+        } finally {
+          if (!loadMore) {
+            setTestsLoading(false);
+          }
+        }
+      };
+      
+      fetchTests(true);
+    }
+  };
 
   // Handle tab switching logic
   useEffect(() => {
@@ -688,12 +827,12 @@ export default function TestPage() {
         });
 
         // Log API call
-        debugLogger.logApiCall('POST', '/api/submit-test-result', testResultData);
+        debugLogger.logApiCall('POST', '/api/v1/submit-test-result', testResultData);
         
         const callStartTime = Date.now();
         
         // Call the Next.js API route instead of Cloud Function
-        const response = await fetch('/api/submit-test-result', {
+        const response = await fetch('/api/v1/submit-test-result', {
           method: 'POST',
           headers: getHeaders({
             'Content-Type': 'application/json',
@@ -1177,49 +1316,72 @@ export default function TestPage() {
                       )}
                       
                       {!testsLoading && !testsError && preMadeTests.length > 0 && (
-                        <div className="grid gap-3 max-h-96 overflow-y-auto">
-                          {preMadeTests.map((test) => (
-                            <div
-                              key={test.id}
-                              className={`
-                                p-4 rounded-lg border cursor-pointer transition-all duration-200
-                                ${selectedTestId === test.id
-                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                  : 'border-border hover:border-primary/50 hover:bg-accent'
-                                }
-                              `}
-                              onClick={() => handleTestSelection(test)}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-foreground">{test.source}</span>
-                                  <span className={`
-                                    px-2 py-1 rounded text-xs font-medium
-                                    ${test.difficulty === 'Easy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-                                      test.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
-                                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                                    }
-                                  `}>
-                                    {test.difficulty}
-                                  </span>
+                        <>
+                          <div className="grid gap-3 max-h-96 overflow-y-auto">
+                            {preMadeTests.map((test) => (
+                              <div
+                                key={test.id}
+                                className={`
+                                  p-4 rounded-lg border cursor-pointer transition-all duration-200
+                                  ${selectedTestId === test.id
+                                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                    : 'border-border hover:border-primary/50 hover:bg-accent'
+                                  }
+                                `}
+                                onClick={() => handleTestSelection(test)}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-foreground">{test.source}</span>
+                                    <span className={`
+                                      px-2 py-1 rounded text-xs font-medium
+                                      ${test.difficulty === 'Easy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                                        test.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                      }
+                                    `}>
+                                      {test.difficulty}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    <span>{test.wordCount} words</span>
+                                    <span className="mx-2">•</span>
+                                    <span>{test.timeLimit < 60 ? `${test.timeLimit}s` : `${test.timeLimit / 60}m`}</span>
+                                  </div>
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                  <span>{test.wordCount} words</span>
-                                  <span className="mx-2">•</span>
-                                  <span>{test.timeLimit < 60 ? `${test.timeLimit}s` : `${test.timeLimit / 60}m`}</span>
-                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {test.text.substring(0, 120)}...
+                                </p>
+                                {selectedTestId === test.id && (
+                                  <div className="mt-2 text-sm text-primary font-medium">
+                                    ✓ Selected - Ready to start typing
+                                  </div>
+                                )}
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {test.text.substring(0, 120)}...
-                              </p>
-                              {selectedTestId === test.id && (
-                                <div className="mt-2 text-sm text-primary font-medium">
-                                  ✓ Selected - Ready to start typing
-                                </div>
-                              )}
+                            ))}
+                          </div>
+                          
+                          {/* Load More Button */}
+                          {testsPagination.hasNextPage && (
+                            <div className="flex justify-center mt-4">
+                              <Button
+                                variant="outline"
+                                onClick={loadMoreTests}
+                                disabled={testsPagination.loading}
+                                className="min-w-32"
+                              >
+                                {testsPagination.loading ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                                    Loading...
+                                  </>
+                                ) : (
+                                  'Load More Tests'
+                                )}
+                              </Button>
                             </div>
-                          ))}
-                        </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

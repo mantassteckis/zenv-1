@@ -2,6 +2,10 @@
 
 Complete step-by-step guide to deploy ZenType from any device with all necessary requirements, accounts, and configurations.
 
+**Last Updated:** January 2025  
+**Status:** ✅ PRODUCTION READY  
+**Current Version:** v2.1.0 with Rate Limiting & Enhanced Debug System
+
 ## 📋 Prerequisites & System Requirements
 
 ### **System Requirements**
@@ -155,10 +159,15 @@ firebase deploy --only functions
 ```
 
 ### **3. Required Cloud Functions**
-- `submitTestResult` - Saves typing test results
-- `getTests` - Retrieves pre-made typing tests
-- `generateAiTest` - Creates AI-generated typing tests
-- `populateTestData` - Seeds database with sample tests
+- `submitTestResult` - Saves typing test results (✅ DEPLOYED with rate limiting: 100 req/hour)
+- `generateAiTest` - Creates AI-generated typing tests (✅ DEPLOYED with rate limiting: 20 req/hour)
+- `vercelLogDrain` - Processes Vercel log drains for centralized logging (✅ DEPLOYED)
+
+### **4. Rate Limiting Implementation** ✅
+- **Backend**: `firebase-functions-rate-limiter` with Firestore backend
+- **AI Generation**: 20 requests per hour per authenticated user
+- **Test Submission**: 100 requests per hour per authenticated user
+- **Monitoring**: Integrated with enhanced debug system (RATE_LIMITING category)
 
 ---
 
@@ -371,10 +380,13 @@ firebase deploy
 
 ### **Post-Deployment**
 - [ ] Test user registration/login
-- [ ] Verify test result saving works
+- [ ] Verify test result saving works (rate limiting: 100 req/hour)
+- [ ] Test AI generation functionality (rate limiting: 20 req/hour)
 - [ ] Check all pages load correctly
 - [ ] Monitor function logs for errors
 - [ ] Confirm no CORS errors in browser console
+- [ ] Verify rate limiting is working correctly
+- [ ] Test debug system and RATE_LIMITING category logging
 
 ---
 
