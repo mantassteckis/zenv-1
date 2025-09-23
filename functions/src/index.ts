@@ -129,6 +129,10 @@ export const submitTestResult = onCall({
   }
 
   const userId = request.auth.uid;
+  
+  // Rate Limiting Check
+  await checkRateLimit('submitTestResult', userId);
+  
   const context = createFirebaseContext('submitTestResult', userId);
   firebaseLogger.info(context, "Test result submission request");
 
@@ -287,6 +291,8 @@ export const submitTestResult = onCall({
  * Secure Cloud Function to generate AI-powered typing tests
  * Uses Google AI through Genkit to create custom typing content
  */
+import { checkRateLimit } from './rate-limiter';
+
 export const generateAiTest = onCall({
   cors: [
     "http://localhost:3000",
@@ -317,6 +323,10 @@ export const generateAiTest = onCall({
   }
 
   const userId = request.auth.uid;
+  
+  // Rate Limiting Check
+  await checkRateLimit('generateAiTest', userId);
+
   logger.info("✅ DEBUG: Authentication successful", { 
     userId,
     authProvider: (request.auth as any)?.firebase?.sign_in_provider || 'unknown',

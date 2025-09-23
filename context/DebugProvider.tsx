@@ -18,7 +18,8 @@ export type DebugCategory =
   | 'UI'                 // User interface interactions
   | 'PERFORMANCE'        // Performance monitoring
   | 'SYSTEM'             // System-level operations
-  | 'USER_INTERACTION';  // User clicks, inputs, etc.
+  | 'USER_INTERACTION'   // User clicks, inputs, etc.
+  | 'RATE_LIMITING';     // Rate limiting operations and monitoring
 
 // Debug log entry structure with enhanced metadata
 export interface DebugLogEntry {

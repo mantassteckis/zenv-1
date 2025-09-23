@@ -31,7 +31,8 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   'UI': { icon: Layers, color: 'text-indigo-400', description: 'User interface interactions' },
   'PERFORMANCE': { icon: BarChart3, color: 'text-pink-400', description: 'Performance monitoring' },
   'SYSTEM': { icon: Settings, color: 'text-gray-500', description: 'System-level operations' },
-  'USER_INTERACTION': { icon: Target, color: 'text-emerald-400', description: 'User clicks and inputs' }
+  'USER_INTERACTION': { icon: Target, color: 'text-emerald-400', description: 'User clicks and inputs' },
+  'RATE_LIMITING': { icon: Clock, color: 'text-amber-400', description: 'Rate limiting operations and monitoring' }
 };
 
 const DEFAULT_CATEGORY_CONFIG: CategoryConfig = {

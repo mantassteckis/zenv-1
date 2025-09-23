@@ -48,6 +48,8 @@ These are not traditional REST endpoints but are invoked via HTTPS calls from th
 
 *   `POST generateAiTest`
     *   **Description**: Triggers the Genkit AI service to generate a new typing test based on a user-provided topic.
+    *   **Rate Limiting**: 20 requests per hour per authenticated user
+    *   **Authentication**: Required (Firebase ID Token)
     *   **Status**: ✅ FULLY IMPLEMENTED
     *   **Implementation**: Firebase Cloud Function using Google Gemini AI
     *   **Request**: `{ topic: string, difficulty: 'Easy'|'Medium'|'Hard', timeLimit?: number, saveTest: boolean, userInterests?: string[] }`
@@ -56,6 +58,8 @@ These are not traditional REST endpoints but are invoked via HTTPS calls from th
 
 *   `POST submitTestResult`
     *   **Description**: Securely saves typing test results and updates user statistics.
+    *   **Rate Limiting**: 100 requests per hour per authenticated user
+    *   **Authentication**: Required (Firebase ID Token)
     *   **Status**: ✅ FULLY IMPLEMENTED  
     *   **Implementation**: Firebase Cloud Function with Firestore transactions
     *   **Request**: `{ wpm: number, accuracy: number, errors: number, timeTaken: number, textLength: number, userInput: string, testType: string, difficulty: string, testId?: string }`
@@ -206,4 +210,46 @@ This section covers how the API is managed in production.
 **2. Logging:**
 *   **Vercel Logs**: Logs for the Next.js API Routes are sent to the Vercel Log Drains. By default, they are simple text-based logs from `console.log` or `console.error`.
 *   **Firebase Logs (Cloud Logging)**: Logs for all Firebase Cloud Functions are automatically sent to Google Cloud Logging.
-*   **Standardization**: There is currently no strictly enforced standardized logging format (like structured JSON). To improve observability, a standard should be adopted where every log entry includes a `correlationId` (to trace a request across services), the `userId` (if available), and the `functionName` or `apiRoute`.
+*   **Enhanced Debug System**: ✅ IMPLEMENTED - A comprehensive debug logging system with categories including AI_GENERATION, FIREBASE, USER_INTERACTION, API_CALLS, ERROR_HANDLING, PERFORMANCE, SECURITY, and RATE_LIMITING. Features correlation IDs, structured logging, and real-time monitoring through the EnhancedDebugPanel.
+*   **Standardization**: Implemented standardized logging format with structured JSON entries including `correlationId`, `userId`, `functionName`, `category`, and `metadata` for improved observability and debugging.
+
+---
+
+## Section 4: Security & Rate Limiting Implementation
+
+**1. Rate Limiting Architecture:**
+*   **Implementation**: ✅ FULLY IMPLEMENTED using `firebase-functions-rate-limiter` with Firestore backend
+*   **Storage**: Rate limit counters stored in Firestore collection `rateLimitCounters`
+*   **Enforcement**: Per-user limits with automatic reset every hour
+*   **Monitoring**: Integrated with debug system using RATE_LIMITING category
+
+**2. Rate Limit Configuration:**
+*   **generateAiTest**: 20 requests per hour per authenticated user
+*   **submitTestResult**: 100 requests per hour per authenticated user
+*   **Error Response**: HTTP 429 with descriptive error messages when limits exceeded
+
+**3. Security Enhancements:**
+*   **Authentication**: All critical endpoints require Firebase ID Token validation
+*   **Authorization**: Firestore Security Rules enforce user data isolation
+*   **Input Validation**: Zod schema validation on all Cloud Function inputs
+*   **Error Handling**: Secure error responses without sensitive information exposure
+
+---
+
+## Section 5: Current Implementation Status
+
+**Last Updated**: January 2025  
+**Architecture Phase**: Phase 4 Complete - Security & Reliability Hardening  
+**Production Status**: ✅ PRODUCTION READY
+
+**Completed Features:**
+- ✅ Core API endpoints (Next.js API Routes + Firebase Cloud Functions)
+- ✅ AI-powered test generation with Google Gemini
+- ✅ Comprehensive rate limiting system
+- ✅ Enhanced debug and monitoring system
+- ✅ Secure authentication and authorization
+- ✅ Structured logging with correlation IDs
+- ✅ Error handling and fallback mechanisms
+- ✅ API versioning and pagination support
+
+**Next Phase**: Ongoing maintenance and feature enhancements based on user feedback.

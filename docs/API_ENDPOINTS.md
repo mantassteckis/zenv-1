@@ -73,3 +73,158 @@ GET /api/v1/tests?limit=10&cursor=test_doc_id_123
 - Cursor is the document ID of the last item in the current page
 - Maximum limit is enforced server-side to prevent performance issues
 - All filters are applied before pagination
+
+---
+
+## Firebase Cloud Functions
+
+### submitTestResult
+
+**Endpoint:** Firebase Cloud Function  
+**Method:** POST  
+**Authentication:** Required  
+**Rate Limit:** 100 requests per hour per user
+
+Submits test results for both practice and AI-generated tests.
+
+#### Request Body
+
+```json
+{
+  "testData": {
+    "testId": "string",
+    "testType": "practice|ai",
+    "source": "string",
+    "difficulty": "Easy|Medium|Hard",
+    "timeLimit": 60,
+    "wordCount": 150,
+    "text": "Test content..."
+  },
+  "results": {
+    "wpm": 75,
+    "accuracy": 95.5,
+    "timeSpent": 58,
+    "errors": 3,
+    "completedAt": "2025-01-23T10:30:00Z"
+  }
+}
+```
+
+#### Response Format
+
+```json
+{
+  "success": true,
+  "testResultId": "document_id",
+  "message": "Test result submitted successfully"
+}
+```
+
+#### Error Responses
+
+**Rate limit exceeded (429):**
+```json
+{
+  "error": "Rate limit exceeded. Please try again later."
+}
+```
+
+**Authentication required (401):**
+```json
+{
+  "error": "Authentication required"
+}
+```
+
+**Validation error (400):**
+```json
+{
+  "error": "Invalid test data",
+  "details": "Validation error details"
+}
+```
+
+### generateAiTest
+
+**Endpoint:** Firebase Cloud Function  
+**Method:** POST  
+**Authentication:** Required  
+**Rate Limit:** 20 requests per hour per user
+
+Generates AI-powered typing tests using Google Gemini.
+
+#### Request Body
+
+```json
+{
+  "difficulty": "Easy|Medium|Hard",
+  "timeLimit": 60,
+  "category": "general|programming|literature",
+  "customPrompt": "Optional custom prompt for test generation"
+}
+```
+
+#### Response Format
+
+```json
+{
+  "success": true,
+  "test": {
+    "id": "generated_test_id",
+    "source": "AI Generated",
+    "difficulty": "Easy",
+    "timeLimit": 60,
+    "wordCount": 150,
+    "text": "Generated test content...",
+    "category": "general"
+  }
+}
+```
+
+#### Error Responses
+
+**Rate limit exceeded (429):**
+```json
+{
+  "error": "Rate limit exceeded. Please try again later."
+}
+```
+
+**AI generation failed (500):**
+```json
+{
+  "error": "Failed to generate test",
+  "details": "AI service error details"
+}
+```
+
+---
+
+## Legacy Endpoints (Deprecated)
+
+### POST /api/submit-test-result
+
+**Status:** Deprecated - Use Firebase Cloud Function `submitTestResult` instead  
+**Removal Date:** TBD
+
+### GET /api/tests
+
+**Status:** Deprecated - Use `/api/v1/tests` instead  
+**Removal Date:** TBD
+
+---
+
+## Rate Limiting
+
+All Firebase Cloud Functions implement rate limiting using `firebase-functions-rate-limiter` with Firestore backend:
+
+- **submitTestResult:** 100 requests per hour per authenticated user
+- **generateAiTest:** 20 requests per hour per authenticated user
+
+Rate limits are enforced per user ID and reset every hour. When exceeded, endpoints return HTTP 429 with appropriate error messages.
+
+---
+
+**Last Updated:** January 2025  
+**API Version:** v1  
+**Status:** Production Ready

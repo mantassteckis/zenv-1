@@ -105,6 +105,7 @@ Targeted Functions: ['loginUser', 'signupUser', 'validateToken']
 - **AI_GENERATION** - Overall AI test generation flow
 - **AI_TEST_SELECTION** - AI test selection and state management
 - **CLOUD_FUNCTION** - Backend AI generation processing
+- **RATE_LIMITING** - Rate limiting enforcement and monitoring
 
 ### **Common AI Generation Issues**
 
@@ -143,6 +144,27 @@ Targeted Functions: ['loginUser', 'signupUser', 'validateToken']
 1. User not properly signed in
 2. Auth token expired/invalid
 3. Cloud Function auth check failing
+
+#### **Issue 4: Rate Limiting Errors**
+**Symptoms:**
+```json
+{
+  "errorCode": "functions/resource-exhausted",
+  "errorMessage": "Rate limit exceeded. Please try again later."
+}
+```
+
+**Root Causes:**
+1. User exceeded rate limits (20 requests/hour for AI generation, 100/hour for test submission)
+2. Rate limiter configuration issues
+3. Firestore rate limiter backend connectivity problems
+4. Clock synchronization issues affecting rate limit windows
+
+**Debug Steps:**
+1. Check rate limiter logs in RATE_LIMITING category
+2. Verify user's current rate limit status in Firestore
+3. Check rate limiter configuration in Cloud Functions
+4. Monitor rate limit reset times and user request patterns
 
 #### **Issue 3: Validation Errors**
 **Symptoms:**
@@ -286,6 +308,7 @@ debugLogger.info('NEW_CATEGORY', 'Description of what happened', {
 - ✅ Test selection and state management
 - ✅ Cloud Function interactions
 - ✅ Error handling and recovery
+- ✅ Rate limiting enforcement and monitoring
 
 ---
 
