@@ -20,7 +20,6 @@ export interface UserProfile {
   bio?: string; // User's short biography
   preferredThemeId?: string; // e.g., "neon-wave"
   preferredFontId?: string; // e.g., "fira-code"
-  interests?: string[]; // User interests
   settings?: {
     keyboardSounds?: boolean;
     visualFeedback?: boolean;
@@ -56,8 +55,6 @@ export interface TestResult {
   testType: string; // 'practice', 'ai-generated', etc.
   difficulty: string; // 'Easy', 'Medium', 'Hard'
   completedAt: string; // ISO string (renamed from timestamp)
-  correlationId?: string; // Request correlation ID for tracing
-  testId?: string; // Reference to the test that was taken
 }
 
 export interface AiGeneratedTest extends PreMadeTest {

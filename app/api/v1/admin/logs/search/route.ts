@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { performanceLogger } from '@/lib/performance-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
-import { withRateLimit } from '@/lib/rate-limiter';
 
 async function handleGET(request: NextRequest) {
   console.log("Admin logs search API v1 called");
@@ -67,12 +66,12 @@ async function handlePOST(request: NextRequest) {
 }
 
 // Export wrapped handlers
-export const GET = withRateLimit('auth', withPerformanceMonitoring(handleGET, {
+export const GET = withPerformanceMonitoring(handleGET, {
   enablePayloadTracking: false,
   slowRequestThreshold: 500
-}));
+});
 
-export const POST = withRateLimit('auth', withPerformanceMonitoring(handlePOST, {
+export const POST = withPerformanceMonitoring(handlePOST, {
   enablePayloadTracking: true,
   slowRequestThreshold: 1000
-}));
+});

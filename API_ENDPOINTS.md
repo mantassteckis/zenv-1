@@ -99,20 +99,6 @@ interface PreMadeTest {
 }
 ```
 
-**Rate Limiting:**
-- **Limit:** 100 requests per minute per IP address
-- **Implementation:** Uses `@upstash/ratelimit` with Redis backend
-- **Response Headers:** 
-  - `X-RateLimit-Limit`: Maximum requests allowed
-  - `X-RateLimit-Remaining`: Remaining requests in current window
-  - `X-RateLimit-Reset`: Unix timestamp when limit resets
-- **Rate Limit Exceeded:** Returns `429 Too Many Requests` with `Retry-After` header (60 seconds)
-
-**Status Codes:**
-- `200 OK`: Tests retrieved successfully
-- `429 Too Many Requests`: Rate limit exceeded
-- `500 Internal Server Error`: Server error occurred
-
 ### POST /api/v1/submit-test-result
 **Purpose:** Proxy endpoint for submitTestResult Cloud Function  
 **Authentication:** Required (Authorization header)  

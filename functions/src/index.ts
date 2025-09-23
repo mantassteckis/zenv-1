@@ -4,7 +4,6 @@ import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { firebaseLogger, createFirebaseContext, createTimingContext } from './structured-logger';
-import { FirebaseFunctionsRateLimiter } from "firebase-functions-rate-limiter";
 // Import config to load environment variables
 import './config';
 // Import log drain function
@@ -12,25 +11,6 @@ export { vercelLogDrain } from './vercel-log-drain';
 // Initialize Firebase Admin
 initializeApp();
 const db = getFirestore();
-
-// Initialize rate limiters for different functions <mcreference link="https://github.com/Jblew/firebase-functions-rate-limiter" index="5">5</mcreference>
-const submitTestResultLimiter = FirebaseFunctionsRateLimiter.withFirestoreBackend(
-  {
-    name: "submit_test_result_limiter",
-    maxCalls: 10, // 10 submissions per minute per user
-    periodSeconds: 60,
-  },
-  db,
-);
-
-const generateAiTestLimiter = FirebaseFunctionsRateLimiter.withFirestoreBackend(
-  {
-    name: "generate_ai_test_limiter", 
-    maxCalls: 5, // 5 AI generations per minute per user
-    periodSeconds: 60,
-  },
-  db,
-);
 
 // Set global options for cost control
 setGlobalOptions({ maxInstances: 10 });
@@ -151,14 +131,6 @@ export const submitTestResult = onCall({
   const userId = request.auth.uid;
   const context = createFirebaseContext('submitTestResult', userId);
   firebaseLogger.info(context, "Test result submission request");
-
-  // Rate limiting check <mcreference link="https://github.com/Jblew/firebase-functions-rate-limiter" index="5">5</mcreference>
-  const uidQualifier = "u_" + userId;
-  const isQuotaExceeded = await submitTestResultLimiter.isQuotaExceededOrRecordUsage(uidQualifier);
-  if (isQuotaExceeded) {
-    firebaseLogger.warn(context, "Rate limit exceeded for test result submission", { userId });
-    throw new HttpsError("resource-exhausted", "Too many test submissions. Please wait before submitting again.");
-  }
 
   // Data Extraction & Validation
   const testData = request.data as TestResultData;
@@ -350,14 +322,6 @@ export const generateAiTest = onCall({
     authProvider: (request.auth as any)?.firebase?.sign_in_provider || 'unknown',
     authTime: (request.auth as any)?.firebase?.auth_time || 'unknown'
   });
-
-  // Rate limiting check <mcreference link="https://github.com/Jblew/firebase-functions-rate-limiter" index="5">5</mcreference>
-  const uidQualifier = "u_" + userId;
-  const isQuotaExceeded = await generateAiTestLimiter.isQuotaExceededOrRecordUsage(uidQualifier);
-  if (isQuotaExceeded) {
-    logger.warn("🚨 DEBUG: Rate limit exceeded for AI test generation", { userId });
-    throw new HttpsError("resource-exhausted", "Too many AI test generation requests. Please wait before generating another test.");
-  }
 
   // Data Extraction & Validation
   const requestData = request.data as AiTestRequestData;
