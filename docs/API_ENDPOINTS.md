@@ -76,6 +76,106 @@ GET /api/v1/tests?limit=10&cursor=test_doc_id_123
 
 ---
 
+## Next.js API Routes
+
+### POST /api/v1/submit-test-result
+
+**Status:** ✅ Active (Fixed Authentication Issue)  
+**Method:** POST  
+**Authentication:** Required (Firebase ID Token)  
+**Architecture:** Direct Firestore Write using Firebase Admin SDK
+
+Submits typing test results directly to Firestore with enhanced debug logging and server-side authentication validation.
+
+#### Authentication Fix (Latest Update)
+
+**Issue Resolved:** Fixed critical authentication token error where `verifyIdToken` was incorrectly imported as a standalone function.
+
+**Solution Applied:**
+- Removed incorrect `verifyIdToken` standalone import from `firebase-admin/auth`
+- Fixed token verification to use `auth.verifyIdToken(idToken)` method on Auth instance
+- Maintained enhanced debug logging throughout authentication flow
+- Verified successful server recompilation and API functionality
+
+#### Request Headers
+
+```
+Authorization: Bearer <firebase_id_token>
+Content-Type: application/json
+```
+
+#### Request Body
+
+```json
+{
+  "testData": {
+    "testId": "string",
+    "testType": "practice|ai",
+    "source": "string",
+    "difficulty": "Easy|Medium|Hard",
+    "timeLimit": 60,
+    "wordCount": 150,
+    "text": "Test content..."
+  },
+  "results": {
+    "wpm": 75,
+    "accuracy": 95.5,
+    "timeSpent": 58,
+    "errors": 3,
+    "completedAt": "2025-01-23T10:30:00Z"
+  }
+}
+```
+
+#### Response Format
+
+**Success (200):**
+```json
+{
+  "success": true,
+  "testResultId": "firestore_document_id",
+  "message": "Test result submitted successfully",
+  "correlationId": "req-1234567890-abc123"
+}
+```
+
+#### Enhanced Debug Logging Features
+
+- **Correlation ID Tracking:** Each request gets a unique correlation ID for tracing
+- **Performance Monitoring:** Tracks execution time and database operations
+- **Authentication Flow Logging:** Detailed logs for token validation steps
+- **Structured Logging:** Uses `TEST_SUBMISSION` category for filtering
+- **Error Visibility:** Comprehensive error logging with context
+
+#### Status Codes
+
+- **200:** Test result submitted successfully
+- **400:** Invalid request body or missing required fields
+- **401:** Invalid or missing authentication token
+- **403:** User not authorized to submit test results
+- **500:** Internal server error during submission
+
+#### Implementation Status
+
+- ✅ **Authentication:** Fixed Firebase Admin SDK token verification
+- ✅ **Direct Firestore Writes:** Using Firebase Admin SDK for server-side operations
+- ✅ **Enhanced Logging:** Comprehensive debug logging with correlation IDs
+- ✅ **Security:** Server-side token validation and input sanitization
+- ✅ **Error Handling:** Detailed error responses with proper HTTP status codes
+
+#### Architectural Changes
+
+**Previous Architecture:** Firebase Client SDK + Cloud Function Proxy  
+**Current Architecture:** Firebase Admin SDK + Direct Firestore Writes
+
+**Benefits:**
+- Reduced latency (no Cloud Function proxy)
+- Enhanced security (server-side validation)
+- Better error handling and debugging
+- Improved performance monitoring
+
+---
+
 ## Firebase Cloud Functions
 
 ### submitTestResult

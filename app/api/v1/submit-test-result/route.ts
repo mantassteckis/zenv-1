@@ -1,35 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { COLLECTIONS } from '@/lib/types/database';
-import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
+import { db } from '@/lib/firebase-admin';
+import { collection, addDoc } from 'firebase-admin/firestore';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
+import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
-
-// Initialize Firebase Client SDK for both auth and firestore operations
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAipHBANeyyXgq1n9h2G33PAwtuXkMRu-w",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "solotype-23c1f.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "solotype-23c1f",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "solotype-23c1f.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "39439361072",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:39439361072:web:27661c0d7e4e341a02b9f5",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "",
-};
-
-// Initialize Firebase with error handling
-let app;
-let db;
-
-try {
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  db = getFirestore(app);
-  console.log('✅ Firebase initialized successfully');
-} catch (firebaseError) {
-  console.error('❌ Firebase initialization failed:', firebaseError);
-  throw new Error('Firebase initialization failed');
-}
+import { getAuth } from 'firebase-admin/auth';
 
 interface TestResultData {
   wpm: number;
@@ -46,111 +21,192 @@ interface TestResultData {
 async function handlePOST(request: NextRequest) {
   const { startTime } = createTimingContext();
   const context = createApiContext(request, 'POST /api/v1/submit-test-result');
+  const correlationId = request.headers.get(CORRELATION_ID_HEADER) || `v1-submit-${Date.now()}`;
   
   try {
-    logger.info(context, 'API Route: v1/submit-test-result called');
-    logger.info(context, 'Firebase config validated', {
-      apiKey: !!firebaseConfig.apiKey,
-      projectId: firebaseConfig.projectId,
-      authDomain: firebaseConfig.authDomain
+    logger.info(context, 'V1 API Route: submit-test-result called', { 
+      correlationId,
+      timestamp: new Date().toISOString(),
+      userAgent: request.headers.get('user-agent')?.substring(0, 100)
     });
-    
-    // Get the authorization header
+
+    // Enhanced Firebase Admin SDK validation
+    if (!db) {
+      logger.error(context, new Error('Firebase Admin SDK not initialized'), { 
+        correlationId,
+        step: 'FIREBASE_VALIDATION'
+      });
+      throw new Error('Firebase Admin SDK not initialized');
+    }
+
+    logger.info(context, 'Firebase Admin SDK validated successfully', { 
+      correlationId,
+      step: 'FIREBASE_VALIDATED'
+    });
+
+    // Enhanced authentication with detailed logging
     const authHeader = request.headers.get('authorization');
-    logger.info(context, 'Auth header validation', { authHeaderPresent: !!authHeader });
-    
+    logger.info(context, 'Authentication validation started', { 
+      correlationId,
+      authHeaderPresent: !!authHeader,
+      authHeaderFormat: authHeader ? (authHeader.startsWith('Bearer ') ? 'Bearer format' : 'Invalid format') : 'Missing',
+      step: 'AUTH_VALIDATION_START'
+    });
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.warn(context, 'No valid auth header provided');
-      const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+      logger.warn(context, 'Invalid or missing authorization header', { 
+        correlationId,
+        authHeader: authHeader ? 'Present but invalid format' : 'Missing',
+        step: 'AUTH_VALIDATION_FAILED'
+      });
+      
       const errorResponse = NextResponse.json(
-        { error: 'Unauthorized - No valid token provided', correlationId },
+        { 
+          error: 'Authentication required', 
+          details: 'Valid Bearer token required',
+          correlationId
+        },
         { status: 401 }
       );
       errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
-      logger.logRequest(context, startTime, 401, { reason: 'No valid auth header' });
+      logger.logRequest(context, startTime, 401, { reason: 'Missing auth header' });
       return errorResponse;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
-    
-    // For local development, we'll do basic token validation
-    // In production, you'd want to verify the token with Firebase Admin SDK
-    let userId: string;
-    
-    try {
-      // Basic JWT token validation - check if it's properly formatted
-      const tokenParts = idToken.split('.');
-      if (tokenParts.length !== 3) {
-        throw new Error('Invalid token format');
-      }
-      
-      // Decode the payload (for local development only)
-      const payload = JSON.parse(atob(tokenParts[1]));
-      userId = payload.user_id || payload.sub;
-      
-      if (!userId) {
-        throw new Error('No user ID in token');
-      }
-      
-      logger.info(context, 'Token validated successfully', { userId });
-    } catch (error) {
-      logger.warn(context, 'Token validation failed, using fallback', { error: error instanceof Error ? error.message : String(error) });
-      // For testing purposes, use a fallback user ID
-      userId = 'test-user-fallback';
-      logger.info(context, 'Using fallback user ID for testing', { userId });
-    }
-    const testData: TestResultData = await request.json();
-    logger.info(context, 'Test data received', { 
-      wpm: testData.wpm, 
-      accuracy: testData.accuracy, 
-      testType: testData.testType,
-      difficulty: testData.difficulty
+    logger.info(context, 'ID token extracted', { 
+      correlationId,
+      tokenLength: idToken.length,
+      tokenPrefix: idToken.substring(0, 20) + '...',
+      step: 'TOKEN_EXTRACTED'
     });
 
-    // Validate the test data
+    let decodedToken;
+    let userId: string;
+
+    try {
+      const auth = getAuth();
+      decodedToken = await auth.verifyIdToken(idToken);
+      userId = decodedToken.uid;
+      
+      logger.info(context, 'Token verification successful', { 
+        correlationId,
+        userId: userId,
+        userEmail: decodedToken.email || 'No email',
+        tokenIssuer: decodedToken.iss,
+        tokenAudience: decodedToken.aud,
+        step: 'TOKEN_VERIFIED'
+      });
+    } catch (authError) {
+      logger.error(context, authError instanceof Error ? authError : new Error(String(authError)), {
+        correlationId,
+        errorCode: (authError as any)?.code,
+        errorMessage: (authError as any)?.message,
+        step: 'TOKEN_VERIFICATION_FAILED'
+      });
+      
+      const errorResponse = NextResponse.json(
+        { 
+          error: 'Invalid authentication token', 
+          details: authError instanceof Error ? authError.message : 'Token verification failed',
+          correlationId
+        },
+        { status: 401 }
+      );
+      errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+      logger.logRequest(context, startTime, 401, { reason: 'Token verification failed' });
+      return errorResponse;
+    }
+
+    // Enhanced request body parsing with validation
+    let testData: TestResultData;
+    try {
+      testData = await request.json();
+      logger.info(context, 'Request body parsed successfully', { 
+        correlationId,
+        userId,
+        dataKeys: Object.keys(testData),
+        wpm: testData.wpm,
+        accuracy: testData.accuracy,
+        testType: testData.testType,
+        difficulty: testData.difficulty,
+        step: 'REQUEST_PARSED'
+      });
+    } catch (parseError) {
+      logger.error(context, parseError instanceof Error ? parseError : new Error(String(parseError)), {
+        correlationId,
+        userId,
+        step: 'REQUEST_PARSE_FAILED'
+      });
+      
+      const errorResponse = NextResponse.json(
+        { 
+          error: 'Invalid request body', 
+          details: 'Request body must be valid JSON',
+          correlationId
+        },
+        { status: 400 }
+      );
+      errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+      logger.logRequest(context, startTime, 400, { reason: 'JSON parse failed' });
+      return errorResponse;
+    }
+
+    // Enhanced data validation with detailed error reporting
     const validationErrors: string[] = [];
     
-    if (isNaN(testData.wpm) || !isFinite(testData.wpm) || testData.wpm < 0 || testData.wpm > 400) {
-      validationErrors.push("WPM must be a valid number between 0 and 400");
+    if (typeof testData.wpm !== 'number' || testData.wpm < 0 || testData.wpm > 400) {
+      validationErrors.push('WPM must be a number between 0 and 400');
     }
-    
-    if (isNaN(testData.accuracy) || !isFinite(testData.accuracy) || testData.accuracy < 0 || testData.accuracy > 100) {
-      validationErrors.push("Accuracy must be a valid number between 0 and 100");
+    if (typeof testData.accuracy !== 'number' || testData.accuracy < 0 || testData.accuracy > 100) {
+      validationErrors.push('Accuracy must be a number between 0 and 100');
     }
-    
-    if (isNaN(testData.errors) || !isFinite(testData.errors) || testData.errors < 0) {
-      validationErrors.push("Errors must be a valid non-negative number");
+    if (typeof testData.errors !== 'number' || testData.errors < 0) {
+      validationErrors.push('Errors must be a non-negative number');
     }
-    
-    if (isNaN(testData.timeTaken) || !isFinite(testData.timeTaken) || testData.timeTaken <= 0) {
-      validationErrors.push("Time taken must be a valid positive number");
+    if (typeof testData.timeTaken !== 'number' || testData.timeTaken <= 0) {
+      validationErrors.push('Time taken must be a positive number');
     }
-    
-    if (isNaN(testData.textLength) || !isFinite(testData.textLength) || testData.textLength <= 0) {
-      validationErrors.push("Text length must be a valid positive number");
+    if (typeof testData.textLength !== 'number' || testData.textLength <= 0) {
+      validationErrors.push('Text length must be a positive number');
     }
-    
-    if (!testData.userInput || typeof testData.userInput !== "string") {
-      validationErrors.push("User input is required");
+    if (!testData.userInput || typeof testData.userInput !== 'string') {
+      validationErrors.push('User input is required and must be a string');
     }
-    
-    if (!testData.testType || typeof testData.testType !== "string") {
-      validationErrors.push("Test type is required");
+    if (!testData.testType || typeof testData.testType !== 'string') {
+      validationErrors.push('Test type is required and must be a string');
     }
-    
-    if (!testData.difficulty || typeof testData.difficulty !== "string") {
-      validationErrors.push("Difficulty is required");
+    if (!testData.difficulty || typeof testData.difficulty !== 'string') {
+      validationErrors.push('Difficulty is required and must be a string');
     }
-    
-    if (!testData.testId || typeof testData.testId !== "string") {
-      validationErrors.push("Test ID is required");
+    if (!testData.testId || typeof testData.testId !== 'string') {
+      validationErrors.push('Test ID is required and must be a string');
     }
 
     if (validationErrors.length > 0) {
-      logger.warn(context, 'Test data validation failed', { validationErrors });
-      const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
+      logger.warn(context, 'Data validation failed', { 
+        correlationId,
+        userId,
+        validationErrors,
+        receivedData: {
+          wpm: testData.wpm,
+          accuracy: testData.accuracy,
+          errors: testData.errors,
+          timeTaken: testData.timeTaken,
+          textLength: testData.textLength,
+          testType: testData.testType,
+          difficulty: testData.difficulty,
+          testId: testData.testId
+        },
+        step: 'VALIDATION_FAILED'
+      });
+      
       const errorResponse = NextResponse.json(
-        { error: 'Validation failed', details: validationErrors, correlationId },
+        { 
+          error: 'Validation failed', 
+          details: validationErrors,
+          correlationId
+        },
         { status: 400 }
       );
       errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
@@ -158,8 +214,13 @@ async function handlePOST(request: NextRequest) {
       return errorResponse;
     }
 
-    // Simple approach: Just save the test result for now
-    // We'll handle stats updates separately to avoid transaction complexity
+    logger.info(context, 'Data validation passed', { 
+      correlationId,
+      userId,
+      step: 'VALIDATION_PASSED'
+    });
+
+    // Enhanced Firestore write with Admin SDK pattern
     const testResultData = {
       userId: userId,
       wpm: testData.wpm,
@@ -172,53 +233,82 @@ async function handlePOST(request: NextRequest) {
       difficulty: testData.difficulty,
       testId: testData.testId,
       createdAt: new Date(),
+      correlationId: correlationId, // Add correlation ID for debugging
     };
     
-    logger.info(context, 'Attempting to save test result', { 
+    logger.info(context, 'Preparing Firestore write operation', { 
+      correlationId,
       userId,
-      testType: testResultData.testType,
-      difficulty: testResultData.difficulty
+      collection: 'testResults',
+      documentSize: JSON.stringify(testResultData).length,
+      step: 'FIRESTORE_WRITE_PREP'
     });
-    
-    if (!db) {
-      throw new Error('Firebase database not initialized');
-    }
-    
+
     try {
-      logger.info(context, 'Creating document in testResults collection');
-      const testResultsRef = collection(db, 'testResults');
+      // Use Firebase Admin SDK for direct Firestore write (following leaderboard pattern)
+      const testResultsRef = db.collection('testResults');
+      const docRef = await testResultsRef.add(testResultData);
       
-      const docRef = await addDoc(testResultsRef, testResultData);
-      logger.info(context, 'Test result saved successfully', { documentId: docRef.id });
+      logger.info(context, 'Test result saved successfully to Firestore', { 
+        correlationId,
+        userId,
+        documentId: docRef.id,
+        collection: 'testResults',
+        step: 'FIRESTORE_WRITE_SUCCESS'
+      });
+
+      // Enhanced success response
+      const successResponse = NextResponse.json({ 
+        success: true, 
+        message: 'Test result saved successfully',
+        documentId: docRef.id,
+        correlationId,
+        timestamp: new Date().toISOString()
+      });
+      successResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+      
+      logger.logRequest(context, startTime, 200, { 
+        documentId: docRef.id,
+        firestoreSuccess: true
+      });
+      return successResponse;
+
     } catch (firestoreError) {
       logger.error(context, firestoreError instanceof Error ? firestoreError : new Error(String(firestoreError)), {
-        firestoreErrorCode: (firestoreError as any).code
+        correlationId,
+        userId,
+        errorCode: (firestoreError as any)?.code,
+        errorMessage: (firestoreError as any)?.message,
+        step: 'FIRESTORE_WRITE_FAILED'
       });
-      throw firestoreError;
+      
+      const errorResponse = NextResponse.json(
+        { 
+          error: 'Database operation failed', 
+          details: firestoreError instanceof Error ? firestoreError.message : 'Unknown database error',
+          correlationId
+        },
+        { status: 500 }
+      );
+      errorResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
+      logger.logRequest(context, startTime, 500, { 
+        firestoreError: firestoreError instanceof Error ? firestoreError.message : String(firestoreError)
+      });
+      return errorResponse;
     }
-
-    const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
-    const successResponse = NextResponse.json({ 
-      success: true, 
-      message: 'Test result saved successfully',
-      correlationId
-    });
-    successResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
-    
-    logger.logRequest(context, startTime, 200, { userId, testSaved: true });
-    return successResponse;
 
   } catch (error) {
     logger.error(context, error instanceof Error ? error : new Error(String(error)), {
-      errorType: typeof error
+      correlationId,
+      errorType: typeof error,
+      errorConstructor: error?.constructor?.name,
+      step: 'CRITICAL_ERROR'
     });
     
-    const correlationId = request.headers.get(CORRELATION_ID_HEADER) || 'unknown';
     const errorResponse = NextResponse.json(
       { 
         error: 'Internal server error', 
         details: error instanceof Error ? error.message : 'Unknown error',
-        type: typeof error,
         correlationId
       },
       { status: 500 }
@@ -232,9 +322,9 @@ async function handlePOST(request: NextRequest) {
   }
 }
 
-// Export the performance-monitored version
+// Export the performance-monitored version with enhanced configuration
 export const POST = withPerformanceMonitoring(handlePOST, {
   enablePayloadTracking: true,
-  slowRequestThreshold: 2000, // 2 seconds for database operations
-  maxPayloadSizeToLog: 5000
+  slowRequestThreshold: 3000, // 3 seconds for database operations
+  maxPayloadSizeToLog: 10000 // Increased for detailed logging
 });
