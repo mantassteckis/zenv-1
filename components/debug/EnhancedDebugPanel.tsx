@@ -9,7 +9,7 @@ import {
   Bug, X, Download, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, 
   Filter, Search, AlertCircle, Info, AlertTriangle, Zap, Clock,
   Database, Globe, User, Settings, TestTube, Brain, Play, Send,
-  BarChart3, FileText, Layers, Target
+  BarChart3, FileText, Layers, Target, Trophy, History as HistoryIcon
 } from 'lucide-react';
 import type { DebugLevel, DebugCategory } from '@/context/DebugProvider';
 
@@ -53,6 +53,15 @@ const LEVEL_CONFIGS = {
   critical: { icon: Zap, color: 'text-red-500', bgColor: 'bg-red-800', borderClass: 'border-l-red-500' }
 };
 
+/**
+ * Interactive debug panel component for viewing, filtering, grouping, and exporting application debug logs.
+ *
+ * Integrates with the debug context to display real-time log statistics, search (including optional fuzzy search),
+ * level/category/flow filters, auto-refresh, expandable log details (data, metadata, location), smart export/clear actions,
+ * and optional data-source indicators derived from API logs.
+ *
+ * @returns A React element rendering the enhanced debug panel UI.
+ */
 export function EnhancedDebugPanel() {
   const { 
     isDebugEnabled, 
@@ -76,6 +85,16 @@ export function EnhancedDebugPanel() {
   const [expandedFlows, setExpandedFlows] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'category' | 'flow' | 'chronological'>('category');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [showDataSources, setShowDataSources] = useState(false);
+
+  // Data source tracking state
+  const [dataSources, setDataSources] = useState({
+    leaderboard_alltime: 'profiles',
+    leaderboard_weekly: 'leaderboard_weekly', 
+    leaderboard_monthly: 'leaderboard_monthly',
+    dashboard: 'testResults',
+    history: 'testResults'
+  });
 
   // Auto-refresh logs every 2 seconds when panel is open
   useEffect(() => {
@@ -88,6 +107,43 @@ export function EnhancedDebugPanel() {
     
     return () => clearInterval(interval);
   }, [showPanel, autoRefresh]);
+
+  // Monitor data sources from API logs
+  useEffect(() => {
+    const apiLogs = logs.filter(log => 
+      log.category === 'API' && 
+      log.data && 
+      typeof log.data === 'object' && 
+      'dataSource' in log.data
+    );
+
+    if (apiLogs.length > 0) {
+      const latestLog = apiLogs[apiLogs.length - 1];
+      const endpoint = latestLog.data?.endpoint || latestLog.message;
+      const timeframe = latestLog.data?.timeframe || 'all-time';
+      
+      if (endpoint?.includes('/api/leaderboard')) {
+        const dataSource = latestLog.data?.dataSource || 'profiles';
+        
+        if (timeframe === 'weekly' || timeframe === 'week') {
+          setDataSources(prev => ({
+            ...prev,
+            leaderboard_weekly: dataSource
+          }));
+        } else if (timeframe === 'monthly' || timeframe === 'month') {
+          setDataSources(prev => ({
+            ...prev,
+            leaderboard_monthly: dataSource
+          }));
+        } else {
+          setDataSources(prev => ({
+            ...prev,
+            leaderboard_alltime: dataSource
+          }));
+        }
+      }
+    }
+  }, [logs]);
 
   // Get comprehensive statistics
   const stats = useMemo(() => getLogStats(), [logs]);
@@ -328,6 +384,18 @@ export function EnhancedDebugPanel() {
             </div>
             <div className="flex items-center gap-1">
               <Button
+                onClick={() => setShowDataSources(!showDataSources)}
+                size="sm"
+                variant="ghost"
+                className={showDataSources 
+                  ? "text-blue-400 hover:text-blue-300 p-1" 
+                  : "text-gray-400 hover:text-white p-1"
+                }
+                title="Toggle data source indicators"
+              >
+                <Database className="h-3 w-3" />
+              </Button>
+              <Button
                 onClick={() => setAutoRefresh(!autoRefresh)}
                 size="sm"
                 variant="ghost"
@@ -393,6 +461,49 @@ export function EnhancedDebugPanel() {
               </div>
             </div>
           </div>
+
+          {/* Data Source Indicators */}
+          {showDataSources && (
+            <div className="bg-gray-800/30 p-2 border-b border-gray-700 flex-shrink-0">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <Trophy className="h-3 w-3 text-yellow-400" />
+                  <span className="text-gray-300">All-Time:</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                    {dataSources.leaderboard_alltime}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Trophy className="h-3 w-3 text-green-400" />
+                  <span className="text-gray-300">Weekly:</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                    {dataSources.leaderboard_weekly}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Trophy className="h-3 w-3 text-blue-400" />
+                  <span className="text-gray-300">Monthly:</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                    {dataSources.leaderboard_monthly}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BarChart3 className="h-3 w-3 text-cyan-400" />
+                  <span className="text-gray-300">Dashboard:</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                    {dataSources.dashboard}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <HistoryIcon className="h-3 w-3 text-purple-400" />
+                  <span className="text-gray-300">History:</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                    {dataSources.history}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Enhanced Filters */}
           <div className="bg-gray-800/50 p-3 border-b border-gray-700 flex-shrink-0">
