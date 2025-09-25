@@ -100,9 +100,61 @@ interface PreMadeTest {
 ```
 
 ### POST /api/v1/submit-test-result
-**Purpose:** Proxy endpoint for submitTestResult Cloud Function  
-**Authentication:** Required (Authorization header)  
-**Note:** This endpoint validates auth and forwards to the Cloud Function Documentation
+**Purpose:** Save typing test results directly to Firestore using Firebase Admin SDK  
+**Authentication:** Required (Authorization header with Firebase ID token)  
+**Architecture:** Direct Firestore write (Admin SDK) - replaced Cloud Function proxy pattern  
+
+**Request Body:**
+```typescript
+{
+  wpm: number;
+  accuracy: number;
+  errors: number;
+  timeTaken: number;      // in seconds
+  textLength: number;
+  userInput: string;
+  testType: string;       // 'practice', 'ai-generated', etc.
+  difficulty: string;     // 'Easy', 'Medium', 'Hard'
+  testId?: string;        // Optional for practice tests
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean;
+  message: string;
+  data?: {
+    resultId: string;     // Firestore document ID
+    profileUpdated: boolean;
+    correlationId: string; // For debugging and log correlation
+  };
+}
+```
+
+**Enhanced Debug Logging:**
+- **Correlation ID tracking** for end-to-end request tracing
+- **Performance monitoring** with request timing and memory usage
+- **Authentication flow logging** with token validation steps
+- **Data validation logging** with detailed error messages
+- **Firestore operation logging** with collection paths and document IDs
+- **Error handling** with structured error responses and stack traces
+
+**Status Codes:**
+- `200 OK`: Test result saved successfully
+- `400 Bad Request`: Invalid request body or missing required fields
+- `401 Unauthorized`: Invalid or missing Firebase ID token
+- `403 Forbidden`: User not authorized to submit test results
+- `500 Internal Server Error`: Server error during processing
+
+**Implementation Status:** ✅ Completed - Fixed 500 Internal Server Error  
+
+**Architectural Changes (January 2025):**
+- **Replaced:** Firebase Client SDK + Cloud Function proxy pattern
+- **With:** Firebase Admin SDK + direct Firestore writes
+- **Benefits:** Improved error visibility, reduced latency, simplified architecture
+- **Debug Features:** Comprehensive logging with correlation IDs, performance metrics
+- **Security:** Server-side token validation, input sanitization, rate limiting
 
 This document tracks all API routes and Cloud Functions created for the ZenType project.
 

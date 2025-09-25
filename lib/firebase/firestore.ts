@@ -50,6 +50,7 @@ export const createUserProfile = async (
         testsCompleted: 0,
         avgWpm: 0,
         avgAcc: 0,
+        bestWpm: 0,
       },
     };
 
