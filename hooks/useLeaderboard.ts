@@ -12,21 +12,31 @@ export interface LeaderboardEntry {
   userId: string;
 }
 
+interface LeaderboardResponse {
+  leaderboard: LeaderboardEntry[];
+  dataSource?: string;
+  count?: number;
+  filters?: any;
+  correlationId?: string;
+}
+
 interface UseLeaderboardReturn {
   leaderboard: LeaderboardEntry[];
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  dataSource?: string;
 }
 
 /**
  * Custom hook to fetch and manage leaderboard data
  * Provides loading states, error handling, and fallback to dummy data
  */
-export function useLeaderboard(limit: number = 100): UseLeaderboardReturn {
+export function useLeaderboard(limit: number = 100, timeframe: string = 'all-time'): UseLeaderboardReturn {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<string | undefined>(undefined);
   const { getHeaders } = useCorrelationId();
 
   const fetchLeaderboard = async () => {
@@ -34,7 +44,7 @@ export function useLeaderboard(limit: number = 100): UseLeaderboardReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/leaderboard?limit=${limit}`, {
+      const response = await fetch(`/api/leaderboard?limit=${limit}&timeframe=${timeframe}`, {
         method: 'GET',
         headers: getHeaders({
           'Content-Type': 'application/json',
@@ -45,10 +55,11 @@ export function useLeaderboard(limit: number = 100): UseLeaderboardReturn {
         throw new Error(`Failed to fetch leaderboard: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data: LeaderboardResponse = await response.json();
       
       if (data.leaderboard && Array.isArray(data.leaderboard)) {
         setLeaderboard(data.leaderboard);
+        setDataSource(data.dataSource);
       } else {
         throw new Error('Invalid leaderboard data format');
       }
@@ -149,12 +160,13 @@ export function useLeaderboard(limit: number = 100): UseLeaderboardReturn {
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [limit]);
+  }, [limit, timeframe]);
 
   return {
     leaderboard,
     isLoading,
     error,
     refetch: fetchLeaderboard,
+    dataSource,
   };
 }

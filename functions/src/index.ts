@@ -1,5 +1,6 @@
 import {setGlobalOptions} from "firebase-functions";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
@@ -658,5 +659,158 @@ export const generateAiTest = onCall({
     });
     
     throw new HttpsError("internal", "Failed to generate AI test");
+  }
+});
+
+/**
+ * Cloud Function to update leaderboard collections when a new test result is created
+ * Triggers on testResults collection document creation
+ */
+export const updateLeaderboardOnTestResult = onDocumentCreated("testResults/{testId}", async (event) => {
+  const context = createFirebaseContext('updateLeaderboardOnTestResult', event.params?.testId);
+  const { startTime } = createTimingContext();
+  
+  try {
+    const testResult = event.data?.data();
+    const testId = event.params?.testId;
+    
+    if (!testResult) {
+      firebaseLogger.warn(context, 'No test result data found', { testId });
+      return;
+    }
+
+    const { userId, wmp, accuracy, testType, createdAt } = testResult;
+    
+    if (!userId || !wmp || !accuracy) {
+       firebaseLogger.warn(context, 'Missing required fields in test result', { 
+         testId, 
+         hasUserId: !!userId, 
+         hasWpm: !!wmp, 
+         hasAccuracy: !!accuracy 
+       });
+       return;
+     }
+
+    // Get user profile for username
+    const userProfileRef = db.collection('profiles').doc(userId);
+    const userProfileDoc = await userProfileRef.get();
+    
+    if (!userProfileDoc.exists) {
+      firebaseLogger.warn(context, 'User profile not found', { userId, testId });
+      return;
+    }
+
+    const userProfile = userProfileDoc.data();
+    const username = userProfile?.username || 'Anonymous';
+    const email = userProfile?.email || '';
+
+    // Calculate current week and month periods
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    currentWeekStart.setHours(0, 0, 0, 0);
+    
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+    currentWeekEnd.setHours(23, 59, 59, 999);
+
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Prepare leaderboard entry data
+    const leaderboardEntry = {
+      userId,
+      username,
+      email,
+      avgWpm: wmp,
+      bestWpm: wmp,
+      avgAcc: accuracy,
+      testsCompleted: 1,
+      testType: testType || 'practice',
+      rank: userProfile?.stats?.rank || 'E',
+      createdAt: createdAt || new Date(),
+      updatedAt: new Date()
+    };
+
+    // Update weekly leaderboard
+    const weeklyEntry = {
+      ...leaderboardEntry,
+      period: 'weekly',
+      periodStart: currentWeekStart,
+      periodEnd: currentWeekEnd,
+      lastTestDate: createdAt || new Date()
+    };
+
+    // Update monthly leaderboard  
+    const monthlyEntry = {
+      ...leaderboardEntry,
+      period: 'monthly',
+      periodStart: currentMonthStart,
+      periodEnd: currentMonthEnd,
+      lastTestDate: createdAt || new Date()
+    };
+
+    // Use batch writes for atomicity
+    const batch = db.batch();
+
+    // Check if user already has entries in weekly/monthly collections
+    const weeklyRef = db.collection('leaderboard_weekly').doc(userId);
+    const monthlyRef = db.collection('leaderboard_monthly').doc(userId);
+
+    const [weeklyDoc, monthlyDoc] = await Promise.all([
+      weeklyRef.get(),
+      monthlyRef.get()
+    ]);
+
+    // Update or create weekly entry
+    if (weeklyDoc.exists) {
+      const existingWeekly = weeklyDoc.data();
+      const updatedWeekly = {
+         ...weeklyEntry,
+         avgWpm: Math.max(existingWeekly?.avgWpm || 0, wmp),
+         bestWpm: Math.max(existingWeekly?.bestWpm || 0, wmp),
+         testsCompleted: (existingWeekly?.testsCompleted || 0) + 1,
+         avgAcc: Math.round(((existingWeekly?.avgAcc || 0) + accuracy) / 2)
+       };
+      batch.set(weeklyRef, updatedWeekly, { merge: true });
+    } else {
+      batch.set(weeklyRef, weeklyEntry);
+    }
+
+    // Update or create monthly entry
+    if (monthlyDoc.exists) {
+      const existingMonthly = monthlyDoc.data();
+      const updatedMonthly = {
+         ...monthlyEntry,
+         avgWpm: Math.max(existingMonthly?.avgWpm || 0, wmp),
+         bestWpm: Math.max(existingMonthly?.bestWpm || 0, wmp),
+         testsCompleted: (existingMonthly?.testsCompleted || 0) + 1,
+         avgAcc: Math.round(((existingMonthly?.avgAcc || 0) + accuracy) / 2)
+       };
+      batch.set(monthlyRef, updatedMonthly, { merge: true });
+    } else {
+      batch.set(monthlyRef, monthlyEntry);
+    }
+
+    // Commit the batch
+    await batch.commit();
+
+    firebaseLogger.info(context, 'Successfully updated leaderboard collections', {
+      userId,
+      username,
+      wmp,
+      accuracy,
+      testType,
+      weeklyUpdated: true,
+      monthlyUpdated: true,
+      duration: Date.now() - startTime
+    });
+
+  } catch (error) {
+    firebaseLogger.error(context, error instanceof Error ? error : new Error(String(error)), {
+      step: 'LEADERBOARD_UPDATE_ERROR',
+      duration: Date.now() - startTime
+    });
+    // Don't throw error to avoid retries - this is a background function
   }
 });

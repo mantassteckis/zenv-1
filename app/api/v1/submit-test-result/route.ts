@@ -247,10 +247,33 @@ async function handlePOST(request: NextRequest) {
     try {
       // Use Firestore transaction to ensure atomic operations
       await db.runTransaction(async (transaction) => {
-        // Step 1: Read user profile first (ALL READS MUST COME BEFORE WRITES)
+        // STEP 1: PERFORM ALL READS FIRST (Firestore requirement)
         const userProfileRef = db.collection('profiles').doc(userId);
         const userProfileDoc = await transaction.get(userProfileRef);
 
+        // Prepare leaderboard references for reads
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+        weekStart.setHours(0, 0, 0, 0);
+        
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // End of current week (Saturday)
+        weekEnd.setHours(23, 59, 59, 999);
+
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        const weeklyLeaderboardRef = db.collection('leaderboard_weekly').doc(userId);
+        const monthlyLeaderboardRef = db.collection('leaderboard_monthly').doc(userId);
+
+        // Perform all reads using Promise.all for efficiency
+        const [existingWeeklyDoc, existingMonthlyDoc] = await Promise.all([
+          transaction.get(weeklyLeaderboardRef),
+          transaction.get(monthlyLeaderboardRef)
+        ]);
+
+        // Validate user profile exists
         if (!userProfileDoc.exists) {
           logger.warn(context, 'User profile not found during stats update', {
             correlationId,
@@ -299,34 +322,18 @@ async function handlePOST(request: NextRequest) {
           bestWpm: newBestWpm,
         };
 
-        // Step 2: Now perform all writes after reads are complete
-        // Save test result
+        // STEP 2: PREPARE ALL WRITE OPERATIONS (after all reads are complete)
+        
+        // Prepare test result write
         const testResultsRef = db.collection('testResults');
         const testResultDocRef = testResultsRef.doc(); // Generate new document reference
-        transaction.set(testResultDocRef, testResultData);
         
-        logger.info(context, 'Test result document prepared for transaction', { 
-          correlationId,
-          userId,
-          documentId: testResultDocRef.id,
-          step: 'TEST_RESULT_PREPARED'
-        });
-
-        // Update profile with new stats only (remove redundant top-level fields)
+        // Prepare profile update
         const profileUpdates = {
           stats: updatedStats,
         };
 
-        transaction.update(userProfileRef, profileUpdates);
-        
-        logger.info(context, 'Profile stats updated successfully', { 
-          correlationId,
-          userId,
-          updatedStats,
-          step: 'PROFILE_STATS_UPDATED'
-        });
-
-        // Step 3: Update all-time leaderboard
+        // Prepare all-time leaderboard data
         const leaderboardRef = db.collection('leaderboard_all_time').doc(userId);
         const leaderboardData = {
           userId: userId,
@@ -344,33 +351,7 @@ async function handlePOST(request: NextRequest) {
           period: 'all-time'
         };
 
-        transaction.set(leaderboardRef, leaderboardData, { merge: true });
-        
-        logger.info(context, 'All-time leaderboard entry updated successfully', { 
-          correlationId,
-          userId,
-          leaderboardData: {
-            rank: leaderboardData.rank,
-            avgWpm: leaderboardData.avgWpm,
-            testType: leaderboardData.testType
-          },
-          step: 'ALLTIME_LEADERBOARD_UPDATED'
-        });
-
-        // Step 4: Update weekly leaderboard
-        const now = new Date();
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
-        weekStart.setHours(0, 0, 0, 0);
-        
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6); // End of current week (Saturday)
-        weekEnd.setHours(23, 59, 59, 999);
-
-        const weeklyLeaderboardRef = db.collection('leaderboard_weekly').doc(userId);
-        
-        // Check if user has weekly entry for current period
-        const existingWeeklyDoc = await transaction.get(weeklyLeaderboardRef);
+        // Prepare weekly leaderboard data
         let weeklyStats = updatedStats;
         
         if (existingWeeklyDoc.exists) {
@@ -429,24 +410,8 @@ async function handlePOST(request: NextRequest) {
           periodStart: weekStart,
           periodEnd: weekEnd
         };
-        
-        transaction.set(weeklyLeaderboardRef, weeklyLeaderboardData, { merge: true });
-        
-        logger.info(context, 'Weekly leaderboard entry updated successfully', { 
-          correlationId,
-          userId,
-          weeklyStats,
-          step: 'WEEKLY_LEADERBOARD_UPDATED'
-        });
 
-        // Step 5: Update monthly leaderboard
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
-        const monthlyLeaderboardRef = db.collection('leaderboard_monthly').doc(userId);
-        
-        // Check if user has monthly entry for current period
-        const existingMonthlyDoc = await transaction.get(monthlyLeaderboardRef);
+        // Prepare monthly leaderboard data
         let monthlyStats = updatedStats;
         
         if (existingMonthlyDoc.exists) {
@@ -505,14 +470,19 @@ async function handlePOST(request: NextRequest) {
           periodStart: monthStart,
           periodEnd: monthEnd
         };
-        
+
+        // STEP 3: EXECUTE ALL WRITES ATOMICALLY
+        transaction.set(testResultDocRef, testResultData);
+        transaction.update(userProfileRef, profileUpdates);
+        transaction.set(leaderboardRef, leaderboardData, { merge: true });
+        transaction.set(weeklyLeaderboardRef, weeklyLeaderboardData, { merge: true });
         transaction.set(monthlyLeaderboardRef, monthlyLeaderboardData, { merge: true });
         
-        logger.info(context, 'Monthly leaderboard entry updated successfully', { 
+        logger.info(context, 'All transaction operations prepared and executed', { 
           correlationId,
           userId,
-          monthlyStats,
-          step: 'MONTHLY_LEADERBOARD_UPDATED'
+          operations: ['testResult', 'profile', 'allTime', 'weekly', 'monthly'],
+          step: 'TRANSACTION_COMPLETED'
         });
 
         return testResultDocRef.id;

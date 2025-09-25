@@ -1,13 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Header } from "@/components/header"
-import { Trophy, Crown, Medal, Award, Zap, Target, Loader2, AlertCircle } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Trophy, Crown, Medal, Award, Zap, Target, Loader2, AlertCircle, Calendar, Clock, TrendingUp } from "lucide-react"
 import { useLeaderboard } from "@/hooks/useLeaderboard"
 import { useAuth } from "@/context/AuthProvider"
 
 export default function LeaderboardPage() {
-  const { leaderboard, isLoading, error } = useLeaderboard(100);
+  const [timeframe, setTimeframe] = useState<string>("all-time");
+  const { leaderboard, isLoading, error, dataSource } = useLeaderboard(100, timeframe);
   const { user: currentUser } = useAuth();
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -33,6 +36,43 @@ export default function LeaderboardPage() {
             <h1 className="text-4xl font-bold text-foreground">Global Leaderboard</h1>
           </div>
           <p className="text-muted-foreground">See how you stack up against the world's fastest typists</p>
+        </div>
+
+        {/* Timeframe Filter Tabs */}
+        <div className="mb-8">
+          <Tabs value={timeframe} onValueChange={setTimeframe} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
+              <TabsTrigger value="all-time" className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4" />
+                <span>All Time</span>
+              </TabsTrigger>
+              <TabsTrigger value="monthly" className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span>Monthly</span>
+              </TabsTrigger>
+              <TabsTrigger value="weekly" className="flex items-center space-x-2">
+                <Clock className="h-4 w-4" />
+                <span>Weekly</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {/* Filter Status Indicator */}
+          {leaderboard && leaderboard.length > 0 && (
+            <div className="flex items-center justify-center mt-4 space-x-2">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>
+                  Showing {timeframe === 'all-time' ? 'All-Time' : timeframe === 'weekly' ? 'Weekly' : 'Monthly'} Rankings
+                </span>
+                {dataSource && (
+                  <span className="text-xs opacity-70">
+                    • Source: {dataSource}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Loading State */}

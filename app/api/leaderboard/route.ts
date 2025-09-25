@@ -56,20 +56,17 @@ async function handleGET(request: NextRequest) {
       let collectionName = 'profiles';
       let orderByField = 'stats.avgWpm';
       
-      if (filters.timeframe === 'week') {
+      // Use dedicated timeframe collections for better performance
+      if (filters.timeframe === 'weekly' || filters.timeframe === 'week') {
         collectionName = 'leaderboard_weekly';
         orderByField = 'avgWpm';
         dataSource = 'leaderboard_weekly';
-      } else if (filters.timeframe === 'month') {
+      } else if (filters.timeframe === 'monthly' || filters.timeframe === 'month') {
         collectionName = 'leaderboard_monthly';
         orderByField = 'avgWpm';
         dataSource = 'leaderboard_monthly';
-      } else if (filters.timeframe === 'all-time') {
-        // Use leaderboard_all_time for better performance
-        collectionName = 'leaderboard_all_time';
-        orderByField = 'avgWpm';
-        dataSource = 'leaderboard_all_time';
       }
+      // For 'all-time' or undefined timeframe, use profiles collection (default behavior)
       
       // Build query for the selected collection
       let query = db.collection(collectionName).orderBy(orderByField, 'desc');
