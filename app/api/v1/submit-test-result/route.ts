@@ -245,31 +245,138 @@ async function handlePOST(request: NextRequest) {
     });
 
     try {
-      // Use Firebase Admin SDK for direct Firestore write (following leaderboard pattern)
-      const testResultsRef = db.collection('testResults');
-      const docRef = await testResultsRef.add(testResultData);
+      // Use Firestore transaction to ensure atomic operations
+      await db.runTransaction(async (transaction) => {
+        // Step 1: Read user profile first (ALL READS MUST COME BEFORE WRITES)
+        const userProfileRef = db.collection('profiles').doc(userId);
+        const userProfileDoc = await transaction.get(userProfileRef);
+
+        if (!userProfileDoc.exists) {
+          logger.warn(context, 'User profile not found during stats update', {
+            correlationId,
+            userId,
+            step: 'PROFILE_NOT_FOUND'
+          });
+          throw new Error('User profile not found');
+        }
+
+        const userProfile = userProfileDoc.data();
+        const currentStats = userProfile?.stats || {
+          rank: "E",
+          testsCompleted: 0,
+          avgWpm: 0,
+          avgAcc: 0,
+          bestWpm: 0,
+        };
+
+        // Calculate new aggregate stats
+        const newTestsCompleted = currentStats.testsCompleted + 1;
+        
+        // Calculate new average WPM
+        const totalWpm = (currentStats.avgWpm * currentStats.testsCompleted) + testData.wpm;
+        const newAvgWpm = Math.round(totalWpm / newTestsCompleted);
+        
+        // Calculate new average accuracy
+        const totalAcc = (currentStats.avgAcc * currentStats.testsCompleted) + testData.accuracy;
+        const newAvgAcc = Math.round(totalAcc / newTestsCompleted);
+
+        // Calculate best WPM
+        const newBestWpm = Math.max(currentStats.bestWpm || 0, testData.wpm);
+
+        // Calculate rank based on average WPM
+        let newRank = "E";
+        if (newAvgWpm >= 80) newRank = "S";
+        else if (newAvgWpm >= 60) newRank = "A";
+        else if (newAvgWpm >= 40) newRank = "B";
+        else if (newAvgWpm >= 20) newRank = "C";
+        else if (newAvgWpm >= 10) newRank = "D";
+
+        const updatedStats = {
+          rank: newRank,
+          testsCompleted: newTestsCompleted,
+          avgWpm: newAvgWpm,
+          avgAcc: newAvgAcc,
+          bestWpm: newBestWpm,
+        };
+
+        // Step 2: Now perform all writes after reads are complete
+        // Save test result
+        const testResultsRef = db.collection('testResults');
+        const testResultDocRef = testResultsRef.doc(); // Generate new document reference
+        transaction.set(testResultDocRef, testResultData);
+        
+        logger.info(context, 'Test result document prepared for transaction', { 
+          correlationId,
+          userId,
+          documentId: testResultDocRef.id,
+          step: 'TEST_RESULT_PREPARED'
+        });
+
+        // Update profile with new stats only (remove redundant top-level fields)
+        const profileUpdates = {
+          stats: updatedStats,
+        };
+
+        transaction.update(userProfileRef, profileUpdates);
+        
+        logger.info(context, 'Profile stats updated successfully', { 
+          correlationId,
+          userId,
+          updatedStats,
+          step: 'PROFILE_STATS_UPDATED'
+        });
+
+        // Step 3: Update or create leaderboard entry
+        const leaderboardRef = db.collection('leaderboard').doc(userId);
+        const leaderboardData = {
+          userId: userId,
+          username: userProfile?.username || 'Anonymous',
+          email: userProfile?.email || decodedToken.email || '',
+          rank: updatedStats.rank,
+          avgWpm: updatedStats.avgWpm,
+          avgAcc: updatedStats.avgAcc,
+          bestWpm: updatedStats.bestWpm,
+          testsCompleted: updatedStats.testsCompleted,
+          lastTestDate: new Date(),
+          testType: testData.testType,
+          updatedAt: new Date(),
+          createdAt: userProfile?.createdAt || new Date()
+        };
+
+        transaction.set(leaderboardRef, leaderboardData, { merge: true });
+        
+        logger.info(context, 'Leaderboard entry updated successfully', { 
+          correlationId,
+          userId,
+          leaderboardData: {
+            rank: leaderboardData.rank,
+            avgWpm: leaderboardData.avgWpm,
+            testType: leaderboardData.testType
+          },
+          step: 'LEADERBOARD_UPDATED'
+        });
+
+        return testResultDocRef.id;
+      });
       
-      logger.info(context, 'Test result saved successfully to Firestore', { 
+      logger.info(context, 'Transaction completed successfully - test result saved and profile updated', { 
         correlationId,
         userId,
-        documentId: docRef.id,
-        collection: 'testResults',
-        step: 'FIRESTORE_WRITE_SUCCESS'
+        step: 'TRANSACTION_SUCCESS'
       });
 
       // Enhanced success response
       const successResponse = NextResponse.json({ 
         success: true, 
-        message: 'Test result saved successfully',
-        documentId: docRef.id,
+        message: 'Test result saved and profile updated successfully',
         correlationId,
         timestamp: new Date().toISOString()
       });
       successResponse.headers.set(CORRELATION_ID_HEADER, correlationId);
       
       logger.logRequest(context, startTime, 200, { 
-        documentId: docRef.id,
-        firestoreSuccess: true
+        transactionSuccess: true,
+        profileUpdated: true
       });
       return successResponse;
 

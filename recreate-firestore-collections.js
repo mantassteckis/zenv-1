@@ -58,7 +58,10 @@ const sampleProfiles = [
       testsCompleted: 2847,
       avgWpm: 127,
       avgAcc: 98.9
-    }
+    },
+    bestWpm: 145,
+    averageAccuracy: 98.9,
+    testsCompleted: 2847
   },
   {
     uid: "user_002",
@@ -79,7 +82,10 @@ const sampleProfiles = [
       testsCompleted: 1923,
       avgWpm: 119,
       avgAcc: 97.8
-    }
+    },
+    bestWpm: 135,
+    averageAccuracy: 97.8,
+    testsCompleted: 1923
   },
   {
     uid: "user_003",
@@ -100,7 +106,10 @@ const sampleProfiles = [
       testsCompleted: 1456,
       avgWpm: 115,
       avgAcc: 96.7
-    }
+    },
+    bestWpm: 128,
+    averageAccuracy: 96.7,
+    testsCompleted: 1456
   },
   {
     uid: "user_004",
@@ -121,7 +130,10 @@ const sampleProfiles = [
       testsCompleted: 23,
       avgWpm: 35,
       avgAcc: 87.2
-    }
+    },
+    bestWpm: 42,
+    averageAccuracy: 87.2,
+    testsCompleted: 23
   }
 ];
 
