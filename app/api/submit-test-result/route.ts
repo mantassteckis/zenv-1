@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, writeBatch, Firestore } from 'firebase/firestore';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
@@ -19,8 +19,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase with error handling
-let app;
-let db;
+let app: any;
+let db: Firestore;
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -43,6 +43,170 @@ interface TestResultData {
   testId: string;
 }
 
+/**
+ * Compute the UTC-local week boundaries for a given date where the week runs Sunday through Saturday.
+ *
+ * @param date - The reference date used to determine the week
+ * @returns An object with `weekStart` set to the Sunday of that week at 00:00:00.000 and `weekEnd` set to the following Saturday at 23:59:59.999
+ */
+function getWeekBounds(date: Date) {
+  const weekStart = new Date(date);
+  weekStart.setDate(date.getDate() - date.getDay()); // Sunday
+  weekStart.setHours(0, 0, 0, 0);
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6); // Saturday
+  weekEnd.setHours(23, 59, 59, 999);
+  
+  return { weekStart, weekEnd };
+}
+
+/**
+ * Computes the month boundary timestamps for the month containing the given date.
+ *
+ * @param date - A Date within the target month
+ * @returns An object with `monthStart` set to the first day at 00:00:00.000 and `monthEnd` set to the last day at 23:59:59.999
+ */
+function getMonthBounds(date: Date) {
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  monthStart.setHours(0, 0, 0, 0);
+  
+  const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  monthEnd.setHours(23, 59, 59, 999);
+  
+  return { monthStart, monthEnd };
+}
+
+/**
+ * Update weekly and monthly leaderboard documents for a user by aggregating metrics from a test result.
+ *
+ * This function reads the user's profile and the current week's and month's leaderboard documents, then
+ * atomically creates or updates those leaderboard entries with updated counts, totals, averages, and best WPM.
+ * If the user's profile is missing, the function logs a warning and returns without making changes.
+ *
+ * @param userId - UID of the user whose leaderboard entries will be updated
+ * @param testData - Test result whose metrics (`wpm`, `accuracy`, etc.) are aggregated into the leaderboards
+ * @param db - Firestore instance used for reads and batched writes
+ * @param context - Logging/telemetry context passed to logger calls
+ */
+async function updateLeaderboardCollections(userId: string, testData: TestResultData, db: Firestore, context: any) {
+  const now = new Date();
+  const { weekStart, weekEnd } = getWeekBounds(now);
+  const { monthStart, monthEnd } = getMonthBounds(now);
+  
+  // STEP 1: Perform ALL reads first to avoid transaction issues
+  const profileRef = doc(db, 'profiles', userId);
+  const weeklyDocId = `${userId}_${weekStart.getFullYear()}_${weekStart.getMonth()}_${weekStart.getDate()}`;
+  const monthlyDocId = `${userId}_${monthStart.getFullYear()}_${monthStart.getMonth()}`;
+  const weeklyRef = doc(db, 'leaderboard_weekly', weeklyDocId);
+  const monthlyRef = doc(db, 'leaderboard_monthly', monthlyDocId);
+  
+  // Read all documents at once
+  const [profileSnap, weeklySnap, monthlySnap] = await Promise.all([
+    getDoc(profileRef),
+    getDoc(weeklyRef),
+    getDoc(monthlyRef)
+  ]);
+  
+  if (!profileSnap.exists()) {
+    logger.warn(context, 'User profile not found for leaderboard update', { userId });
+    return;
+  }
+  
+  const profileData = profileSnap.data();
+  const username = profileData.username || 'Unknown User';
+  
+  // STEP 2: Use Firestore batch for atomic writes
+  const batch = writeBatch(db);
+  
+  // Prepare weekly leaderboard update
+  if (weeklySnap.exists()) {
+    const weeklyData = weeklySnap.data();
+    const newTestsCompleted = weeklyData.testsCompleted + 1;
+    const newTotalWpm = weeklyData.totalWpm + testData.wpm;
+    const newTotalAccuracy = weeklyData.totalAccuracy + testData.accuracy;
+    const newAvgWpm = newTotalWpm / newTestsCompleted;
+    const newAvgAccuracy = newTotalAccuracy / newTestsCompleted;
+    const newBestWpm = Math.max(weeklyData.bestWpm, testData.wpm);
+    
+    batch.update(weeklyRef, {
+      testsCompleted: newTestsCompleted,
+      totalWpm: newTotalWpm,
+      totalAccuracy: newTotalAccuracy,
+      avgWpm: newAvgWpm,
+      avgAccuracy: newAvgAccuracy,
+      bestWpm: newBestWpm,
+      lastUpdated: serverTimestamp()
+    });
+  } else {
+    batch.set(weeklyRef, {
+      userId,
+      username,
+      testsCompleted: 1,
+      totalWpm: testData.wpm,
+      totalAccuracy: testData.accuracy,
+      avgWpm: testData.wpm,
+      avgAccuracy: testData.accuracy,
+      bestWpm: testData.wpm,
+      weekStart,
+      weekEnd,
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp()
+    });
+  }
+  
+  // Prepare monthly leaderboard update
+  if (monthlySnap.exists()) {
+    const monthlyData = monthlySnap.data();
+    const newTestsCompleted = monthlyData.testsCompleted + 1;
+    const newTotalWpm = monthlyData.totalWpm + testData.wpm;
+    const newTotalAccuracy = monthlyData.totalAccuracy + testData.accuracy;
+    const newAvgWpm = newTotalWpm / newTestsCompleted;
+    const newAvgAccuracy = newTotalAccuracy / newTestsCompleted;
+    const newBestWpm = Math.max(monthlyData.bestWpm, testData.wpm);
+    
+    batch.update(monthlyRef, {
+      testsCompleted: newTestsCompleted,
+      totalWpm: newTotalWpm,
+      totalAccuracy: newTotalAccuracy,
+      avgWpm: newAvgWpm,
+      avgAccuracy: newAvgAccuracy,
+      bestWpm: newBestWpm,
+      lastUpdated: serverTimestamp()
+    });
+  } else {
+    batch.set(monthlyRef, {
+      userId,
+      username,
+      testsCompleted: 1,
+      totalWpm: testData.wpm,
+      totalAccuracy: testData.accuracy,
+      avgWpm: testData.wpm,
+      avgAccuracy: testData.accuracy,
+      bestWpm: testData.wpm,
+      monthStart,
+      monthEnd,
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp()
+    });
+  }
+  
+  // STEP 3: Commit the batch
+  await batch.commit();
+  
+  logger.info(context, 'Leaderboard collections updated successfully', { 
+    userId, 
+    weeklyDocId, 
+    monthlyDocId 
+  });
+}
+
+/**
+ * Handles POST requests to submit a typing test result: validates authorization and payload, saves the result to Firestore, and returns a JSON response with a correlation ID.
+ *
+ * @param request - Incoming NextRequest expected to include an Authorization `Bearer` token header and a JSON body matching `TestResultData`
+ * @returns A NextResponse with a JSON payload indicating success or an error and including a `correlationId`; responses use HTTP 200 for success, 400 for validation failures, 401 for authorization failures, and 500 for internal errors.
+ */
 async function handlePOST(request: NextRequest) {
   const { startTime } = createTimingContext();
   const context = createApiContext(request, 'POST /api/submit-test-result');
@@ -190,6 +354,9 @@ async function handlePOST(request: NextRequest) {
       
       const docRef = await addDoc(testResultsRef, testResultData);
       logger.info(context, 'Test result saved successfully', { documentId: docRef.id });
+      
+      // Leaderboard update functionality temporarily removed to avoid transaction issues
+      logger.info(context, 'Test result saved successfully without leaderboard update');
     } catch (firestoreError) {
       logger.error(context, firestoreError instanceof Error ? firestoreError : new Error(String(firestoreError)), {
         firestoreErrorCode: (firestoreError as any).code
