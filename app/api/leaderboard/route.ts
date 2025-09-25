@@ -52,55 +52,89 @@ async function handleGET(request: NextRequest) {
     let dataSource = 'profiles';
     
     try {
-      // Build query for profiles collection
-      let query = db.collection('profiles').orderBy('stats.avgWpm', 'desc');
+      // Determine which collection to query based on timeframe
+      let collectionName = 'profiles';
+      let orderByField = 'stats.avgWpm';
+      
+      if (filters.timeframe === 'week') {
+        collectionName = 'leaderboard_weekly';
+        orderByField = 'avgWpm';
+        dataSource = 'leaderboard_weekly';
+      } else if (filters.timeframe === 'month') {
+        collectionName = 'leaderboard_monthly';
+        orderByField = 'avgWpm';
+        dataSource = 'leaderboard_monthly';
+      } else if (filters.timeframe === 'all-time') {
+        // Use leaderboard_all_time for better performance
+        collectionName = 'leaderboard_all_time';
+        orderByField = 'avgWpm';
+        dataSource = 'leaderboard_all_time';
+      }
+      
+      // Build query for the selected collection
+      let query = db.collection(collectionName).orderBy(orderByField, 'desc');
 
       // Apply limit
       if (filters.limit && filters.limit > 0) {
         query = query.limit(Math.min(filters.limit, 100));
       }
 
-      const profilesSnapshot = await query.get();
+      const snapshot = await query.get();
       
-      if (!profilesSnapshot.empty) {
+      if (!snapshot.empty) {
         let rank = 1;
-        profilesSnapshot.forEach((doc) => {
+        snapshot.forEach((doc) => {
           const data = doc.data();
-          const stats = data.stats || {};
           
-          // Only include profiles with meaningful stats
-          if (stats.avgWpm && stats.avgWpm > 0 && stats.testsCompleted && stats.testsCompleted > 0) {
-            // Apply timeframe filter on client side (since we can't easily query nested fields with date ranges)
-            let includeEntry = true;
-            
-            if (filters.timeframe && filters.timeframe !== 'all-time') {
-              // For now, include all entries since we don't have lastTestDate in profiles
-              // This could be enhanced by adding lastTestDate to profiles collection
-              includeEntry = true;
-            }
-            
-            if (includeEntry) {
-              leaderboardData.push({
-                rank,
-                username: data.username || 'Anonymous',
-                bestWpm: stats.bestWpm || stats.avgWpm,
-                testsCompleted: stats.testsCompleted,
-                averageAccuracy: stats.avgAcc || 0,
-                userId: doc.id,
-                email: data.email,
-                avgWpm: stats.avgWpm,
-                testType: 'all', // Profiles don't separate by test type currently
-                lastTestDate: data.updatedAt || data.createdAt
-              });
-              rank++;
-            }
+          // Handle different data structures based on collection
+          let stats, username, email, userId, avgWpm, bestWpm, avgAcc, testsCompleted, lastTestDate;
+          
+          if (collectionName === 'profiles') {
+            stats = data.stats || {};
+            username = data.username;
+            email = data.email;
+            userId = doc.id;
+            avgWpm = stats.avgWpm;
+            bestWpm = stats.bestWpm || stats.avgWpm;
+            avgAcc = stats.avgAcc;
+            testsCompleted = stats.testsCompleted;
+            lastTestDate = data.updatedAt || data.createdAt;
+          } else {
+            // leaderboard collections have flat structure
+            username = data.username;
+            email = data.email;
+            userId = data.userId || doc.id;
+            avgWpm = data.avgWpm;
+            bestWpm = data.bestWpm || data.avgWpm;
+            avgAcc = data.avgAcc;
+            testsCompleted = data.testsCompleted;
+            lastTestDate = data.lastTestDate || data.updatedAt;
+          }
+          
+          // Only include entries with meaningful stats
+          if (avgWpm && avgWpm > 0 && testsCompleted && testsCompleted > 0) {
+            leaderboardData.push({
+              rank,
+              username: username || 'Anonymous',
+              bestWpm: bestWpm,
+              testsCompleted: testsCompleted,
+              averageAccuracy: avgAcc || 0,
+              userId: userId,
+              email: email,
+              avgWpm: avgWpm,
+              testType: data.testType || 'all',
+              lastTestDate: lastTestDate
+            });
+            rank++;
           }
         });
       }
       
-      logger.info(context, 'Successfully fetched leaderboard from profiles collection', {
+      logger.info(context, `Successfully fetched leaderboard from ${collectionName} collection`, {
         correlationId,
-        entriesFound: leaderboardData.length
+        entriesFound: leaderboardData.length,
+        dataSource,
+        timeframe: filters.timeframe
       });
       
     } catch (profilesError) {

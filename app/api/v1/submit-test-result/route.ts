@@ -326,8 +326,8 @@ async function handlePOST(request: NextRequest) {
           step: 'PROFILE_STATS_UPDATED'
         });
 
-        // Step 3: Update or create leaderboard entry
-        const leaderboardRef = db.collection('leaderboard').doc(userId);
+        // Step 3: Update all-time leaderboard
+        const leaderboardRef = db.collection('leaderboard_all_time').doc(userId);
         const leaderboardData = {
           userId: userId,
           username: userProfile?.username || 'Anonymous',
@@ -340,12 +340,13 @@ async function handlePOST(request: NextRequest) {
           lastTestDate: new Date(),
           testType: testData.testType,
           updatedAt: new Date(),
-          createdAt: userProfile?.createdAt || new Date()
+          createdAt: userProfile?.createdAt || new Date(),
+          period: 'all-time'
         };
 
         transaction.set(leaderboardRef, leaderboardData, { merge: true });
         
-        logger.info(context, 'Leaderboard entry updated successfully', { 
+        logger.info(context, 'All-time leaderboard entry updated successfully', { 
           correlationId,
           userId,
           leaderboardData: {
@@ -353,7 +354,165 @@ async function handlePOST(request: NextRequest) {
             avgWpm: leaderboardData.avgWpm,
             testType: leaderboardData.testType
           },
-          step: 'LEADERBOARD_UPDATED'
+          step: 'ALLTIME_LEADERBOARD_UPDATED'
+        });
+
+        // Step 4: Update weekly leaderboard
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+        weekStart.setHours(0, 0, 0, 0);
+        
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // End of current week (Saturday)
+        weekEnd.setHours(23, 59, 59, 999);
+
+        const weeklyLeaderboardRef = db.collection('leaderboard_weekly').doc(userId);
+        
+        // Check if user has weekly entry for current period
+        const existingWeeklyDoc = await transaction.get(weeklyLeaderboardRef);
+        let weeklyStats = updatedStats;
+        
+        if (existingWeeklyDoc.exists) {
+          const existingWeeklyData = existingWeeklyDoc.data();
+          // Check if it's the same week
+          if (existingWeeklyData?.periodStart?.toDate() >= weekStart) {
+            // Same week - update stats
+            const weeklyTestsCompleted = (existingWeeklyData.testsCompleted || 0) + 1;
+            const weeklyTotalWpm = ((existingWeeklyData.avgWpm || 0) * (existingWeeklyData.testsCompleted || 0)) + testData.wpm;
+            const weeklyNewAvgWpm = Math.round(weeklyTotalWpm / weeklyTestsCompleted);
+            const weeklyTotalAcc = ((existingWeeklyData.avgAcc || 0) * (existingWeeklyData.testsCompleted || 0)) + testData.accuracy;
+            const weeklyNewAvgAcc = Math.round(weeklyTotalAcc / weeklyTestsCompleted);
+            const weeklyNewBestWpm = Math.max(existingWeeklyData.bestWpm || 0, testData.wpm);
+            
+            weeklyStats = {
+              ...weeklyStats,
+              testsCompleted: weeklyTestsCompleted,
+              avgWpm: weeklyNewAvgWpm,
+              avgAcc: weeklyNewAvgAcc,
+              bestWpm: weeklyNewBestWpm
+            };
+          } else {
+            // New week - reset stats
+            weeklyStats = {
+              rank: newRank,
+              testsCompleted: 1,
+              avgWpm: testData.wpm,
+              avgAcc: testData.accuracy,
+              bestWpm: testData.wpm
+            };
+          }
+        } else {
+          // First entry for this user in weekly leaderboard
+          weeklyStats = {
+            rank: newRank,
+            testsCompleted: 1,
+            avgWpm: testData.wpm,
+            avgAcc: testData.accuracy,
+            bestWpm: testData.wpm
+          };
+        }
+
+        const weeklyLeaderboardData = {
+          userId: userId,
+          username: userProfile?.username || 'Anonymous',
+          email: userProfile?.email || decodedToken.email || '',
+          avgWpm: weeklyStats.avgWpm,
+          bestWpm: weeklyStats.bestWpm,
+          avgAcc: weeklyStats.avgAcc,
+          testsCompleted: weeklyStats.testsCompleted,
+          rank: weeklyStats.rank,
+          testType: testData.testType,
+          lastTestDate: new Date(),
+          updatedAt: new Date(),
+          period: 'weekly',
+          periodStart: weekStart,
+          periodEnd: weekEnd
+        };
+        
+        transaction.set(weeklyLeaderboardRef, weeklyLeaderboardData, { merge: true });
+        
+        logger.info(context, 'Weekly leaderboard entry updated successfully', { 
+          correlationId,
+          userId,
+          weeklyStats,
+          step: 'WEEKLY_LEADERBOARD_UPDATED'
+        });
+
+        // Step 5: Update monthly leaderboard
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        const monthlyLeaderboardRef = db.collection('leaderboard_monthly').doc(userId);
+        
+        // Check if user has monthly entry for current period
+        const existingMonthlyDoc = await transaction.get(monthlyLeaderboardRef);
+        let monthlyStats = updatedStats;
+        
+        if (existingMonthlyDoc.exists) {
+          const existingMonthlyData = existingMonthlyDoc.data();
+          // Check if it's the same month
+          if (existingMonthlyData?.periodStart?.toDate() >= monthStart) {
+            // Same month - update stats
+            const monthlyTestsCompleted = (existingMonthlyData.testsCompleted || 0) + 1;
+            const monthlyTotalWpm = ((existingMonthlyData.avgWpm || 0) * (existingMonthlyData.testsCompleted || 0)) + testData.wpm;
+            const monthlyNewAvgWpm = Math.round(monthlyTotalWpm / monthlyTestsCompleted);
+            const monthlyTotalAcc = ((existingMonthlyData.avgAcc || 0) * (existingMonthlyData.testsCompleted || 0)) + testData.accuracy;
+            const monthlyNewAvgAcc = Math.round(monthlyTotalAcc / monthlyTestsCompleted);
+            const monthlyNewBestWpm = Math.max(existingMonthlyData.bestWpm || 0, testData.wpm);
+            
+            monthlyStats = {
+              ...monthlyStats,
+              testsCompleted: monthlyTestsCompleted,
+              avgWpm: monthlyNewAvgWpm,
+              avgAcc: monthlyNewAvgAcc,
+              bestWpm: monthlyNewBestWpm
+            };
+          } else {
+            // New month - reset stats
+            monthlyStats = {
+              rank: newRank,
+              testsCompleted: 1,
+              avgWpm: testData.wpm,
+              avgAcc: testData.accuracy,
+              bestWpm: testData.wpm
+            };
+          }
+        } else {
+          // First entry for this user in monthly leaderboard
+          monthlyStats = {
+            rank: newRank,
+            testsCompleted: 1,
+            avgWpm: testData.wpm,
+            avgAcc: testData.accuracy,
+            bestWpm: testData.wpm
+          };
+        }
+
+        const monthlyLeaderboardData = {
+          userId: userId,
+          username: userProfile?.username || 'Anonymous',
+          email: userProfile?.email || decodedToken.email || '',
+          avgWpm: monthlyStats.avgWpm,
+          bestWpm: monthlyStats.bestWpm,
+          avgAcc: monthlyStats.avgAcc,
+          testsCompleted: monthlyStats.testsCompleted,
+          rank: monthlyStats.rank,
+          testType: testData.testType,
+          lastTestDate: new Date(),
+          updatedAt: new Date(),
+          period: 'monthly',
+          periodStart: monthStart,
+          periodEnd: monthEnd
+        };
+        
+        transaction.set(monthlyLeaderboardRef, monthlyLeaderboardData, { merge: true });
+        
+        logger.info(context, 'Monthly leaderboard entry updated successfully', { 
+          correlationId,
+          userId,
+          monthlyStats,
+          step: 'MONTHLY_LEADERBOARD_UPDATED'
         });
 
         return testResultDocRef.id;
