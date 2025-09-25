@@ -59,17 +59,12 @@ export default function LeaderboardPage() {
           
           {/* Filter Status Indicator */}
           {leaderboard && leaderboard.length > 0 && (
-            <div className="flex items-center justify-center mt-4 space-x-2">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="flex items-center justify-center mt-2 space-x-2">
+              <div className="flex items-center space-x-2 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-full">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                 <span>
-                  Showing {timeframe === 'all-time' ? 'All-Time' : timeframe === 'weekly' ? 'Weekly' : 'Monthly'} Rankings
+                  {timeframe === 'all-time' ? 'All-Time' : timeframe === 'weekly' ? 'Weekly' : 'Monthly'} Rankings
                 </span>
-                {dataSource && (
-                  <span className="text-xs opacity-70">
-                    • Source: {dataSource}
-                  </span>
-                )}
               </div>
             </div>
           )}

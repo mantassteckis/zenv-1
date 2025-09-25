@@ -199,7 +199,9 @@ async function handleGET(request: NextRequest) {
     logger.logRequest(context, startTime, 200, { 
       count: leaderboardData.length,
       filters,
-      dataSource
+      dataSource,
+      timeframe: filters.timeframe,
+      endpoint: '/api/leaderboard'
     });
     return response;
 
