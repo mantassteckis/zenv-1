@@ -30,6 +30,7 @@ export interface UserProfile {
     testsCompleted: number;
     avgWpm: number;
     avgAcc: number;
+    bestWpm?: number; // Best WPM achieved
   };
 }
 

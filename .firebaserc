@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "solotype-23c1f"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }
