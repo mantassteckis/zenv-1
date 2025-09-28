@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
-import { collection, addDoc } from 'firebase-admin/firestore';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
@@ -357,7 +356,7 @@ async function handlePOST(request: NextRequest) {
         if (existingWeeklyDoc.exists) {
           const existingWeeklyData = existingWeeklyDoc.data();
           // Check if it's the same week
-          if (existingWeeklyData?.periodStart?.toDate() >= weekStart) {
+          if (existingWeeklyData && existingWeeklyData.periodStart?.toDate() >= weekStart) {
             // Same week - update stats
             const weeklyTestsCompleted = (existingWeeklyData.testsCompleted || 0) + 1;
             const weeklyTotalWpm = ((existingWeeklyData.avgWpm || 0) * (existingWeeklyData.testsCompleted || 0)) + testData.wpm;
@@ -417,7 +416,7 @@ async function handlePOST(request: NextRequest) {
         if (existingMonthlyDoc.exists) {
           const existingMonthlyData = existingMonthlyDoc.data();
           // Check if it's the same month
-          if (existingMonthlyData?.periodStart?.toDate() >= monthStart) {
+          if (existingMonthlyData && existingMonthlyData.periodStart?.toDate() >= monthStart) {
             // Same month - update stats
             const monthlyTestsCompleted = (existingMonthlyData.testsCompleted || 0) + 1;
             const monthlyTotalWpm = ((existingMonthlyData.avgWpm || 0) * (existingMonthlyData.testsCompleted || 0)) + testData.wpm;

@@ -1,34 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, QueryConstraint } from 'firebase/firestore';
+import { collection, query, where, getDocs, QueryConstraint, Firestore } from 'firebase/firestore';
 import { PreMadeTest, COLLECTIONS } from '@/lib/types/database';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
+import { db } from '@/lib/firebase/client';
 
-// Initialize Firebase Client SDK for both auth and firestore operations
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAipHBANeyyXgq1n9h2G33PAwtuXkMRu-w",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "solotype-23c1f.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "solotype-23c1f",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "solotype-23c1f.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "39439361072",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:39439361072:web:27661c0d7e4e341a02b9f5",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "",
-};
-
-// Initialize Firebase with error handling
-let app;
-let db;
-
-try {
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  db = getFirestore(app);
-  console.log('✅ Firebase initialized successfully');
-} catch (firebaseError) {
-  console.error('❌ Firebase initialization failed:', firebaseError);
-  throw new Error('Firebase initialization failed');
-}
+// Use the centralized Firebase client configuration
+const database: Firestore = db;
 
 async function handleGET(request: NextRequest) {
   const { startTime } = createTimingContext();
@@ -46,7 +25,7 @@ async function handleGET(request: NextRequest) {
     logger.info(context, 'Query parameters extracted', { difficulty, timeLimit, category });
 
     // Create base query - using test_contents collection as per user's Firestore structure
-    let baseQuery = collection(db, COLLECTIONS.TEST_CONTENTS);
+    let baseQuery = collection(database, COLLECTIONS.TEST_CONTENTS);
     const constraints: QueryConstraint[] = [];
 
     // Add difficulty filter if provided and valid

@@ -57,11 +57,11 @@ async function handleGET(request: NextRequest) {
       let orderByField = 'stats.avgWpm';
       
       // Use dedicated timeframe collections for better performance
-      if (filters.timeframe === 'weekly' || filters.timeframe === 'week') {
+      if (filters.timeframe === 'week') {
         collectionName = 'leaderboard_weekly';
         orderByField = 'avgWpm';
         dataSource = 'leaderboard_weekly';
-      } else if (filters.timeframe === 'monthly' || filters.timeframe === 'month') {
+      } else if (filters.timeframe === 'month') {
         collectionName = 'leaderboard_monthly';
         orderByField = 'avgWpm';
         dataSource = 'leaderboard_monthly';

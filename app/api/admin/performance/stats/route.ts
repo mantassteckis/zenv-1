@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { performanceLogger } from '@/lib/performance-logger';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
 
+// Required for static export
+export const dynamic = 'force-static';
+
 async function handleGET(request: NextRequest) {
   console.log("Admin performance stats API called");
   
