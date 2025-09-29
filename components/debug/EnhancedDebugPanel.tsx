@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDebug } from '@/context/DebugProvider';
+import { useAuth } from '@/context/AuthProvider';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -9,7 +11,8 @@ import {
   Bug, X, Download, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, 
   Filter, Search, AlertCircle, Info, AlertTriangle, Zap, Clock,
   Database, Globe, User, Settings, TestTube, Brain, Play, Send,
-  BarChart3, FileText, Layers, Target, Trophy, History as HistoryIcon
+  BarChart3, FileText, Layers, Target, Trophy, History as HistoryIcon,
+  Palette, Type, Volume2, Save
 } from 'lucide-react';
 import type { DebugLevel, DebugCategory } from '@/context/DebugProvider';
 
@@ -76,6 +79,10 @@ export function EnhancedDebugPanel() {
     getLogsByFlow
   } = useDebug();
   
+  // User preferences integration
+  const { user, profile } = useAuth();
+  const { preferences, currentTheme, currentFont } = useUserPreferences();
+  
   const [showPanel, setShowPanel] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedLevel, setSelectedLevel] = useState<string>('ALL');
@@ -86,6 +93,7 @@ export function EnhancedDebugPanel() {
   const [viewMode, setViewMode] = useState<'category' | 'flow' | 'chronological'>('category');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showDataSources, setShowDataSources] = useState(false);
+  const [showUserPreferences, setShowUserPreferences] = useState(false);
 
   // Data source tracking state
   const [dataSources, setDataSources] = useState({
@@ -384,6 +392,18 @@ export function EnhancedDebugPanel() {
             </div>
             <div className="flex items-center gap-1">
               <Button
+                onClick={() => setShowUserPreferences(!showUserPreferences)}
+                size="sm"
+                variant="ghost"
+                className={showUserPreferences 
+                  ? "text-purple-400 hover:text-purple-300 p-1" 
+                  : "text-gray-400 hover:text-white p-1"
+                }
+                title="Toggle user preferences debug"
+              >
+                <User className="h-3 w-3" />
+              </Button>
+              <Button
                 onClick={() => setShowDataSources(!showDataSources)}
                 size="sm"
                 variant="ghost"
@@ -461,6 +481,83 @@ export function EnhancedDebugPanel() {
               </div>
             </div>
           </div>
+
+          {/* User Preferences Debug */}
+          {showUserPreferences && (
+            <div className="bg-gray-800/30 p-3 border-b border-gray-700 flex-shrink-0">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-4 w-4 text-purple-400" />
+                  <span className="text-sm font-semibold text-white">User Preferences State</span>
+                  <Badge variant="outline" className="text-xs">
+                    {new Date().toLocaleTimeString()}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-3 w-3 text-purple-400" />
+                      <span className="text-gray-300">Theme:</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                        {currentTheme.name}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Type className="h-3 w-3 text-blue-400" />
+                      <span className="text-gray-300">Font:</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                        {currentFont.name}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="h-3 w-3 text-green-400" />
+                      <span className="text-gray-300">Sounds:</span>
+                      <Badge 
+                        variant={preferences.keyboardSounds ? "default" : "secondary"}
+                        className="text-xs px-1 py-0 h-4"
+                      >
+                        {preferences.keyboardSounds ? "ON" : "OFF"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-3 w-3 text-yellow-400" />
+                      <span className="text-gray-300">Visual:</span>
+                      <Badge 
+                        variant={preferences.visualFeedback ? "default" : "secondary"}
+                        className="text-xs px-1 py-0 h-4"
+                      >
+                        {preferences.visualFeedback ? "ON" : "OFF"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-600">
+                  <Save className="h-3 w-3 text-orange-400" />
+                  <span className="text-gray-300">Auto-save AI:</span>
+                  <Badge 
+                    variant={preferences.autoSaveAiTests ? "default" : "secondary"}
+                    className="text-xs px-1 py-0 h-4"
+                  >
+                    {preferences.autoSaveAiTests ? "ON" : "OFF"}
+                  </Badge>
+                  <span className="text-gray-400 ml-auto">
+                    User: {user ? user.email : 'Not logged in'}
+                  </span>
+                </div>
+                
+                <div className="text-xs text-gray-400 pt-1">
+                  Profile Sync: {user && profile ? 'Active' : 'Inactive'} • 
+                  Cross-Tab Sync: Active • 
+                  Storage: {typeof window !== 'undefined' ? 'Available' : 'SSR'}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Data Source Indicators */}
           {showDataSources && (

@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useRef, useCallback, useState, useEffect } from "react"
+import React, { useRef, useCallback, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,16 +16,23 @@ import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase/client"
 import { useDebugLogger } from "@/context/DebugProvider"
 import { useCorrelationId } from "@/hooks/useCorrelationId"
+import { useUserPreferences } from "@/hooks/useUserPreferences"
 // Removed Cloud Function imports - now using Next.js API route
-
-interface TypingCustomization {
-  theme: string
-  font: string
-}
 
 export default function TestPage(): JSX.Element | null {
   // Auth and user data
   const { user, profile, isLoading } = useAuth();
+  
+  // User preferences with real-time sync
+  const { 
+    preferences, 
+    currentTheme, 
+    currentFont, 
+    availableThemes, 
+    availableFonts,
+    setTheme,
+    setFont
+  } = useUserPreferences();
   
   // Debug logging
   const debugLogger = useDebugLogger();
@@ -59,10 +65,6 @@ export default function TestPage(): JSX.Element | null {
   const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
   const [topic, setTopic] = useState("");
   const [currentTestId, setCurrentTestId] = useState<string | null>(null);
-  const [typingCustomization, setTypingCustomization] = useState<TypingCustomization>({
-    theme: "default",
-    font: "fira-code",
-  });
 
   // Pre-made tests management state
   const [preMadeTests, setPreMadeTests] = useState<PreMadeTest[]>([]);
@@ -117,15 +119,8 @@ export default function TestPage(): JSX.Element | null {
   useEffect(() => {
     if (!isMounted) return;
     
-    const savedTheme = localStorage.getItem("zenTypeTheme");
-    const savedFont = localStorage.getItem("zenTypeFont");
-
-    if (savedTheme) {
-      setTypingCustomization((prev) => ({ ...prev, theme: savedTheme }));
-    }
-    if (savedFont) {
-      setTypingCustomization((prev) => ({ ...prev, font: savedFont }));
-    }
+    // Preferences are now handled by useUserPreferences hook
+    // No need to manually load from localStorage
   }, [isMounted]);
 
   // Fetch pre-made tests from API
@@ -428,7 +423,6 @@ export default function TestPage(): JSX.Element | null {
     debugLogger.addToFlow(flowId, 'info', 'User initiated AI test generation', {
       hasUser: !!user,
       topic: topic.trim(),
-      userInterests: profile?.interests || [],
       selectedDifficulty,
       selectedTime
     }, 'app/test/page.tsx:handleGenerateAiTest');
@@ -457,7 +451,6 @@ export default function TestPage(): JSX.Element | null {
     debugLogger.addToFlow(flowId, 'info', 'Input validation passed, proceeding with generation', {
       userId: user.uid,
       topicLength: topic.trim().length,
-      userInterests: profile?.interests || [],
       difficulty: selectedDifficulty,
       timeLimit: selectedTime
     });
@@ -473,8 +466,7 @@ export default function TestPage(): JSX.Element | null {
         userId: user.uid,
         autoSaveAiTests,
         hasProfile: !!profile,
-        hasSettings: !!profile?.settings,
-        userInterests: profile?.interests || []
+        hasSettings: !!profile?.settings
       });
 
       // Prepare request data
@@ -482,14 +474,12 @@ export default function TestPage(): JSX.Element | null {
         topic: topic.trim(),
         difficulty: selectedDifficulty,
         timeLimit: selectedTime,
-        saveTest: autoSaveAiTests,
-        userInterests: profile?.interests || []
+        saveTest: autoSaveAiTests
       };
 
       debugLogger.addToFlow(flowId, 'info', 'Request data prepared for Cloud Function', {
         requestDataKeys: Object.keys(requestData),
         topicLength: requestData.topic.length,
-        hasUserInterests: requestData.userInterests.length > 0,
         saveTest: requestData.saveTest
       });
 
@@ -500,8 +490,7 @@ export default function TestPage(): JSX.Element | null {
         functionName: 'generateAiTest',
         topic: requestData.topic,
         difficulty: requestData.difficulty,
-        timeLimit: requestData.timeLimit,
-        userInterestsCount: requestData.userInterests.length
+        timeLimit: requestData.timeLimit
       });
 
       // Log API call
@@ -936,20 +925,21 @@ export default function TestPage(): JSX.Element | null {
     endTestRef.current = endTest;
   }, [endTest]);
 
-  // Track textToType state changes for critical debugging
+  // Track textToType state changes for critical debugging (only in development)
   useEffect(() => {
-    console.log('🔄 textToType STATE CHANGED:', {
-      newLength: textToType.length,
-      isDummyText: textToType.includes('The quick brown fox'),
-      isAiText: !textToType.includes('The quick brown fox') && textToType.length > 100,
-      preview: `"${textToType.substring(0, 50)}..."`,
-      timestamp: new Date().toISOString(),
-      stackTrace: new Error().stack?.split('\n').slice(1, 4).join(' | ')
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 textToType STATE CHANGED:', {
+        newLength: textToType.length,
+        isDummyText: textToType.includes('The quick brown fox'),
+        isAiText: !textToType.includes('The quick brown fox') && textToType.length > 100,
+        preview: `"${textToType.substring(0, 50)}..."`,
+        timestamp: new Date().toISOString()
+      });
+    }
   }, [textToType]);
 
   useEffect(() => {
-    if (debugLogger.isDebugEnabled && aiTest) {
+    if (process.env.NODE_ENV === 'development' && debugLogger.isDebugEnabled && aiTest) {
       console.log('🔍 DEBUG: aiTest updated', {
         testId: aiTest.id,
         textLength: aiTest.text?.length || 0,
@@ -1182,26 +1172,6 @@ export default function TestPage(): JSX.Element | null {
   const timeOptions = ["30", "60", "120", "300"];
   const difficultyOptions = ["Easy", "Medium", "Hard"];
 
-  const typingThemes = [
-    { id: "default", name: "Default", gradient: "from-background to-background", textColor: "text-foreground" },
-    { id: "neon-wave", name: "Neon Wave", gradient: "from-purple-900/20 to-cyan-900/20", textColor: "text-cyan-300" },
-    { id: "sunset", name: "Sunset", gradient: "from-orange-900/20 to-pink-900/20", textColor: "text-orange-200" },
-    { id: "forest", name: "Forest", gradient: "from-green-900/20 to-emerald-900/20", textColor: "text-green-200" },
-    { id: "ocean", name: "Ocean", gradient: "from-blue-900/20 to-teal-900/20", textColor: "text-blue-200" },
-    { id: "midnight", name: "Midnight", gradient: "from-slate-900/40 to-indigo-900/40", textColor: "text-slate-200" },
-  ];
-
-  const fontOptions = [
-    { id: "fira-code", name: "Fira Code", className: "font-mono" },
-    { id: "jetbrains-mono", name: "JetBrains Mono", className: "font-mono" },
-    { id: "source-code-pro", name: "Source Code Pro", className: "font-mono" },
-    { id: "roboto-mono", name: "Roboto Mono", className: "font-mono" },
-    { id: "ubuntu-mono", name: "Ubuntu Mono", className: "font-mono" },
-  ];
-
-  const currentTheme = typingThemes.find((t) => t.id === typingCustomization.theme) || typingThemes[0];
-  const currentFont = fontOptions.find((f) => f.id === typingCustomization.font) || fontOptions[0];
-
   // Configuration View
   if (view === 'config') {
     return (
@@ -1216,7 +1186,7 @@ export default function TestPage(): JSX.Element | null {
               </p>
             </div>
             <GlassCard className="space-y-8">
-              <Tabs value={activeTab} onValueChange={(value) => {
+              <Tabs value={activeTab} onValueChange={(value: string) => {
                 setActiveTab(value);
                 if (value === "practice") setTopic("");
               }}>
@@ -1577,23 +1547,26 @@ export default function TestPage(): JSX.Element | null {
               </GlassCard>
             </div>
 
-            <div className="flex justify-end space-x-4">
+            {/* Direct Theme/Font Controls for Real-Time Test Customization */}
+            <div className="flex justify-end space-x-4 mb-4">
               <div className="flex items-center space-x-2">
                 <Palette className="h-4 w-4 text-muted-foreground" />
                 <Select
-                  value={typingCustomization.theme}
-                  onValueChange={(value) => {
-                    setTypingCustomization((prev) => ({ ...prev, theme: value }));
-                    localStorage.setItem("zenTypeTheme", value);
-                  }}
+                  value={preferences.theme}
+                  onValueChange={setTheme}
                 >
-                  <SelectTrigger className="w-32 h-8 text-xs glass-card border-border">
-                    <SelectValue />
+                  <SelectTrigger className="w-32 h-8 text-xs glass-card border-border bg-background/50">
+                    <SelectValue placeholder="Theme" />
                   </SelectTrigger>
                   <SelectContent className="glass-card border-border">
-                    {typingThemes.map((theme) => (
+                    {availableThemes.map((theme) => (
                       <SelectItem key={theme.id} value={theme.id} className="text-xs">
-                        {theme.name}
+                        <div className="flex items-center space-x-2">
+                          <div 
+                            className={`w-3 h-3 rounded-full bg-gradient-to-r ${theme.gradient} border border-border/50`}
+                          />
+                          <span>{theme.name}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1603,17 +1576,14 @@ export default function TestPage(): JSX.Element | null {
               <div className="flex items-center space-x-2">
                 <Type className="h-4 w-4 text-muted-foreground" />
                 <Select
-                  value={typingCustomization.font}
-                  onValueChange={(value) => {
-                    setTypingCustomization((prev) => ({ ...prev, font: value }));
-                    localStorage.setItem("zenTypeFont", value);
-                  }}
+                  value={preferences.font}
+                  onValueChange={setFont}
                 >
-                  <SelectTrigger className="w-32 h-8 text-xs glass-card border-border">
-                    <SelectValue />
+                  <SelectTrigger className="w-32 h-8 text-xs glass-card border-border bg-background/50">
+                    <SelectValue placeholder="Font" />
                   </SelectTrigger>
                   <SelectContent className="glass-card border-border">
-                    {fontOptions.map((font) => (
+                    {availableFonts.map((font) => (
                       <SelectItem key={font.id} value={font.id} className={`text-xs ${font.className}`}>
                         {font.name}
                       </SelectItem>
@@ -1658,65 +1628,25 @@ export default function TestPage(): JSX.Element | null {
                   <p className="text-sm">Click here and start typing to continue the test</p>
                 )}
               </div>
-            </div>
 
-            {/* Virtual Keyboard */}
-            <GlassCard className="p-6">
-              <div className="space-y-2">
-                <div className="flex justify-center gap-1">
-                  {["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"].map((key) => (
-                    <div
-                      key={key}
-                      className="w-10 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm"
-                    >
-                      {key}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center gap-1">
-                  {["A", "S", "D", "F", "G", "H", "J", "K", "L"].map((key) => (
-                    <div
-                      key={key}
-                      className="w-10 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm"
-                    >
-                      {key}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center gap-1">
-                  {["Z", "X", "C", "V", "B", "N", "M"].map((key) => (
-                    <div
-                      key={key}
-                      className="w-10 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm"
-                    >
-                      {key}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center">
-                  <div className="w-64 h-10 bg-accent rounded flex items-center justify-center text-foreground text-sm">
-                    SPACE
-                  </div>
-                </div>
+              {/* Resume/Finish Test buttons positioned directly below the typing test */}
+              <div className="flex justify-center gap-4 mt-6">
+                <Button
+                  onClick={togglePause}
+                  variant="outline"
+                  className="border-border text-foreground hover:bg-accent bg-transparent"
+                >
+                  {status === 'running' ? 'Pause' : 'Resume'}
+                </Button>
+                <Button
+                  ref={finishButtonRef}
+                  onClick={endTest}
+                  variant="outline"
+                  className="border-border text-foreground hover:bg-accent bg-transparent"
+                >
+                  Finish Test
+                </Button>
               </div>
-            </GlassCard>
-
-            <div className="flex justify-center gap-4">
-              <Button
-                onClick={togglePause}
-                variant="outline"
-                className="border-border text-foreground hover:bg-accent bg-transparent"
-              >
-                {status === 'running' ? 'Pause' : 'Resume'}
-              </Button>
-              <Button
-                ref={finishButtonRef}
-                onClick={endTest}
-                variant="outline"
-                className="border-border text-foreground hover:bg-accent bg-transparent"
-              >
-                Finish Test
-              </Button>
             </div>
           </div>
         </main>
