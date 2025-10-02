@@ -105,9 +105,9 @@ async function createLeaderboardCollections() {
 }
 
 /**
- * Compute the start-of-week date for the given date, using Sunday as the start of the week.
+ * Compute the start of the week (Sunday) for the given date, preserving the input's time-of-day.
  * @param {Date|string|number} date - The input date (Date object, ISO string, or timestamp).
- * @returns {Date} A Date representing the start of the week (same time-of-day as the input) on the Sunday of that week.
+ * @returns {Date} A Date set to the Sunday of the same week with the same hour/minute/second/millisecond as the input.
  */
 function getWeekStart(date) {
   const d = new Date(date);
@@ -129,9 +129,9 @@ function getWeekEnd(weekStart) {
 }
 
 /**
- * Compute the first day of the month for a given date.
- * @param {Date|string|number} date - A Date object, ISO date string, or timestamp representing the target date.
- * @returns {Date} A Date set to the first day of the same month at 00:00:00.000 (local time).
+ * Compute the first calendar day of the month for a given date at local midnight.
+ * @param {Date|string|number} date - Date, ISO date string, or timestamp representing the target date.
+ * @returns {Date} The first day of the same month with time set to 00:00:00.000 (local time).
  */
 function getMonthStart(date) {
   const d = new Date(date);

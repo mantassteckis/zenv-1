@@ -225,7 +225,18 @@ function extractUserIdFromRequest(request: NextRequest): string | undefined {
   return undefined;
 }
 
-// Performance monitoring decorator for class methods
+/**
+ * Creates a method decorator that measures execution duration and optionally records a database query.
+ *
+ * When applied to a class method, the decorator captures a correlation id, records the start time,
+ * invokes the original method, and records performance information. If `collection` is provided,
+ * a database query tracking entry is created. Errors thrown by the wrapped method are logged with
+ * performance context and then rethrown.
+ *
+ * @param operation - A descriptive name of the operation used in performance records
+ * @param collection - Optional database collection name; when provided, a database query tracking entry will be recorded
+ * @returns A method decorator that wraps the original method to record execution duration and optionally track a database query; it preserves the original return value and propagates errors after logging
+ */
 export function MonitorPerformance(operation: string, collection?: string) {
   return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
     const method = descriptor.value;
@@ -270,7 +281,13 @@ export function MonitorPerformance(operation: string, collection?: string) {
   };
 }
 
-// Utility function to create performance-aware database wrapper
+/**
+ * Wraps a database client so its method calls are tracked and reported to the performance monitor.
+ *
+ * @param db - The database client or API object whose callable methods should be monitored
+ * @param correlationId - Correlation identifier to include with reported query metrics
+ * @returns A proxy object mirroring `db` that instruments function properties to record execution time and report database queries using the provided `correlationId`
+ */
 export function createPerformanceAwareDbWrapper(db: any, correlationId: string) {
   return new Proxy(db, {
     get(target, prop) {

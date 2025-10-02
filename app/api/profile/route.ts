@@ -4,12 +4,8 @@ import { db } from '@/lib/firebase-admin';
 /**
  * Creates a user profile document in Firestore from the request JSON.
  *
- * @param request - NextRequest whose JSON body must include `uid` and `email`. Optional fields: `username`, `bio`, `preferredThemeId`, `preferredFontId`, `settings` (with `keyboardSounds`, `visualFeedback`, `autoSaveAiTests`), `stats` (with `rank`, `avgAcc`, `avgWpm`, `testsCompleted`), `bestWpm`, `testsCompleted`, `averageAccuracy`, and `createdAt`.
- * @returns A JSON NextResponse with one of:
- * - `{ success: true, message: 'Profile created successfully', profile: { ... } }` when creation succeeds.
- * - `{ error: 'Missing required fields: uid and email' }` with status 400 when `uid` or `email` is missing.
- * - `{ error: 'Profile already exists for this user' }` with status 409 when a profile for `uid` already exists.
- * - `{ error: 'Internal server error' }` with status 500 on unexpected errors.
+ * @param request - NextRequest whose JSON body must include `uid` and `email`. Optional fields: `username`, `bio`, `preferredThemeId`, `preferredFontId`, `settings`, `stats`, `bestWpm`, `testsCompleted`, `averageAccuracy`, `createdAt`.
+ * @returns `{ success: true, message: 'Profile created successfully', profile: { ... } }` on success; `{ error: 'Missing required fields: uid and email' }` with status 400 when `uid` or `email` is missing; `{ error: 'Profile already exists for this user' }` with status 409 when a profile for `uid` already exists; `{ error: 'Internal server error' }` with status 500 on unexpected errors.
  */
 export async function POST(request: NextRequest) {
   try {

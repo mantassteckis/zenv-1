@@ -9,13 +9,11 @@ import { useLeaderboard } from "@/hooks/useLeaderboard"
 import { useAuth } from "@/context/AuthProvider"
 
 /**
- * Render the global typing leaderboard page with timeframe filtering, loading/error/empty states, a top-3 podium, and a full leaderboard table.
+ * Render the global typing leaderboard page with timeframe filtering and UI for loading, error, empty, and populated states.
  *
- * The component fetches leaderboard data for the selected timeframe, shows a loading spinner while fetching,
- * displays error or empty-state cards when appropriate, highlights the current user throughout the UI,
- * and provides a detailed table of ranks, usernames, best WPM, tests completed, and accuracy.
+ * The page displays a top-3 podium and a full leaderboard table showing rank, username, best WPM, tests completed, and accuracy, and visually highlights the current user.
  *
- * @returns The React element for the leaderboard page.
+ * @returns The React element for the leaderboard page
  */
 export default function LeaderboardPage() {
   const [timeframe, setTimeframe] = useState<string>("all-time");

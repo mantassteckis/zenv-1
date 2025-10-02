@@ -30,6 +30,13 @@ try {
   throw new Error('Firebase initialization failed');
 }
 
+/**
+ * Handle GET requests to list pre-made tests with optional filters and cursor-based pagination.
+ *
+ * Supports query parameters: `difficulty`, `timeLimit`, `category`, `limit` (default 20, max 50), and `cursor`.
+ *
+ * @returns A JSON HTTP response. On success the body contains `data` (array of `PreMadeTest`) and `pagination` (with `nextCursor`, `hasNextPage`, `limit`, and `count`). On failure the body contains an error payload with `error`, `message`, and `correlationId`, and the response status is 500.
+ */
 async function handleGET(request: NextRequest) {
   const { startTime } = createTimingContext();
   const context = createApiContext(request, 'GET /api/v1/tests');

@@ -24,19 +24,19 @@ interface LeaderboardFilters {
 }
 
 /**
- * Handle GET /api/leaderboard requests and return a normalized leaderboard payload.
+ * Produce a normalized leaderboard response for the GET /api/leaderboard endpoint.
  *
- * Parses query parameters (testType, timeframe, limit), queries the appropriate Firestore collection
- * (with a fallback to a legacy leaderboard collection on profiles fetch failure), normalizes document
- * shapes into a unified leaderboard array, and attaches structured metadata and a correlation ID.
+ * Accepts query parameters (testType, timeframe, limit) and returns a JSON payload containing
+ * the leaderboard entries along with applied filters and request metadata.
  *
- * @returns A NextResponse whose JSON body contains:
- * - `leaderboard`: an array of leaderboard entries,
- * - `filters`: the applied filters,
+ * @param request - The incoming NextRequest for the leaderboard GET endpoint
+ * @returns A JSON response body with:
+ * - `leaderboard`: an array of leaderboard entries (ranked and normalized),
+ * - `filters`: the applied filters (`testType`, `timeframe`, `limit`),
  * - `count`: the number of entries returned,
  * - `dataSource`: the collection used to produce the results,
  * - `correlationId`: the request correlation identifier.
- * On error the response has status 500 and includes `error`, `details`, an empty `leaderboard`, and `correlationId`. The response also sets the correlation ID header.
+ * On error the response has HTTP status 500 and a body containing `error`, `details`, an empty `leaderboard`, and `correlationId`.
  */
 async function handleGET(request: NextRequest) {
   const { startTime } = createTimingContext();

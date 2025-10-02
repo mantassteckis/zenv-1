@@ -18,12 +18,12 @@ interface TestResultData {
 }
 
 /**
- * Handle POST /api/v1/submit-test-result: validate authentication and request body, persist a test result, and atomically update the user's profile and leaderboards.
+ * Process a submitted test result: authenticate the requester, validate the payload, persist the test result, and atomically update the user's profile and weekly/monthly/all-time leaderboards.
  *
- * The request must include a Bearer ID token in the `Authorization` header and a JSON body matching `TestResultData`.
+ * Requires a Bearer Firebase ID token in the `Authorization` header and a JSON body that matches `TestResultData`.
  *
- * @param request - Incoming NextRequest containing the authorization header and the test result JSON body
- * @returns A NextResponse containing `{ success: true, ... }` and a correlationId on success, or an error object with `error`, `details`, and `correlationId` on failure; status codes reflect the failure reason (401 for auth, 400 for validation, 500 for server/database errors)
+ * @param request - The incoming NextRequest containing the authorization header and the test result JSON body
+ * @returns A NextResponse containing a success JSON with `correlationId` and `timestamp` on success; on failure returns an error JSON with `error`, `details`, and `correlationId` and an appropriate HTTP status code (401 for auth, 400 for validation, 500 for server/database errors)
  */
 async function handlePOST(request: NextRequest) {
   const { startTime } = createTimingContext();
