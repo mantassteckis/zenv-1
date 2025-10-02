@@ -71,6 +71,12 @@ interface PerformanceDashboardProps {
   className?: string;
 }
 
+/**
+ * Renders the performance dashboard UI for viewing and exploring API metrics, trends, and diagnostics.
+ *
+ * @param className - Optional CSS class names to apply to the dashboard root container.
+ * @returns A React element containing controls, key metric cards, endpoint and database analyses, and error/loading states.
+ */
 export function PerformanceDashboard({ className }: PerformanceDashboardProps) {
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
   const [stats, setStats] = useState<PerformanceStats | null>(null);

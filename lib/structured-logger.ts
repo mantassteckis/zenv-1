@@ -129,7 +129,13 @@ export function createTimingContext(): { startTime: number } {
   return { startTime: Date.now() };
 }
 
-// Helper function for API route logging
+/**
+ * Builds a LogContext for a Next.js API route.
+ *
+ * @param req - The incoming request object; if present this function reads `x-correlation-id` from headers (supports both `headers.get` and legacy header access), and uses `req.method` and `req.url` or `req.nextUrl?.pathname` for request metadata.
+ * @param userId - Optional user identifier to include in the context
+ * @returns A LogContext prefilled for API logging: `serviceName` set to `"nextjs-api"`, the provided `functionName`, optional `userId`, a `correlationId` taken from the `x-correlation-id` header or newly generated, `requestMethod`, and `requestPath`.
+ */
 export function createApiContext(req: any, functionName: string, userId?: string): LogContext {
   const correlationId = req.headers?.get ? req.headers.get('x-correlation-id') : req.headers?.['x-correlation-id'];
   

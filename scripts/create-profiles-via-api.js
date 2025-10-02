@@ -80,9 +80,9 @@ async function createProfileViaAPI(user) {
 }
 
 /**
- * Create profiles for all users listed in `usersNeedingProfiles` by sending profile data to the API.
+ * Create profiles for users in `usersNeedingProfiles` by sending profile data to the API.
  *
- * Iterates the list sequentially, awaiting each profile creation and logging progress to the console.
+ * Processes the users sequentially, sending each profile to the API and logging progress and spacing to the console.
  */
 async function createMissingProfiles() {
   console.log('🚀 Starting to create missing profiles...\n');

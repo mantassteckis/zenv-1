@@ -17,7 +17,15 @@ import { functions } from "@/lib/firebase/client"
 import { useDebugLogger } from "@/context/DebugProvider"
 import { useCorrelationId } from "@/hooks/useCorrelationId"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
-// Removed Cloud Function imports - now using Next.js API route
+/**
+ * Render the typing test interface including configuration, active typing, AI generation, and results views.
+ *
+ * The component manages authentication-aware flows, user preferences (theme/font), pre-made test fetching and pagination,
+ * AI-generated test creation and selection, the active typing session (timer, input handling, WPM/accuracy), and result
+ * submission. It also contains development-only debug instrumentation and guards for client-side rendering.
+ *
+ * @returns The component's rendered React element for the Test page, or `null` when nothing should be rendered (e.g., during hydration/loading).
+ */
 
 export default function TestPage(): JSX.Element | null {
   // Auth and user data

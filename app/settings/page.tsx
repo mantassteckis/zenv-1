@@ -14,6 +14,15 @@ import { useAuth } from "@/context/AuthProvider"
 import { updateUserProfile } from "@/lib/firebase/firestore"
 import { useUserPreferences } from "@/hooks/useUserPreferences"
 
+/**
+ * Render the Settings page where an authenticated user can view and modify profile information,
+ * choose typing-area theme and font, toggle general preferences, save changes, and manage account deletion.
+ *
+ * Displays a loading state while auth is resolving and a sign-in prompt when no user is authenticated.
+ * Includes a guarded delete flow requiring an explicit confirmation token before allowing account deletion.
+ *
+ * @returns The Settings page React element
+ */
 export default function SettingsPage() {
   const { user, profile, isLoading } = useAuth()
   const { 

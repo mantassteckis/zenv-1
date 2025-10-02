@@ -13,6 +13,13 @@ import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } f
 import { auth } from "@/lib/firebase/client"
 import { createUserProfile } from "@/lib/firebase/firestore"
 
+/**
+ * Render the signup page and handle account creation via email/password or Google.
+ *
+ * Manages form state for username, email, and password, exposes handlers that create user accounts and profiles, verify profile creation, and navigate to the dashboard after successful signup.
+ *
+ * @returns The signup page JSX element
+ */
 export default function SignupPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")

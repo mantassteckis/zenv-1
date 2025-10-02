@@ -44,9 +44,9 @@ interface TestResultData {
 }
 
 /**
- * Compute the UTC-local week boundaries for a given date where the week runs Sunday through Saturday.
+ * Compute the start and end timestamps for the week containing the provided date, with the week running Sunday through Saturday.
  *
- * @param date - The reference date used to determine the week
+ * @param date - Reference date used to determine the week
  * @returns An object with `weekStart` set to the Sunday of that week at 00:00:00.000 and `weekEnd` set to the following Saturday at 23:59:59.999
  */
 function getWeekBounds(date: Date) {
@@ -78,16 +78,16 @@ function getMonthBounds(date: Date) {
 }
 
 /**
- * Update weekly and monthly leaderboard documents for a user by aggregating metrics from a test result.
+ * Aggregate a test result into the user's weekly and monthly leaderboard documents in Firestore.
  *
- * This function reads the user's profile and the current week's and month's leaderboard documents, then
- * atomically creates or updates those leaderboard entries with updated counts, totals, averages, and best WPM.
- * If the user's profile is missing, the function logs a warning and returns without making changes.
+ * Reads the user's profile and the current week/month leaderboard documents, then atomically creates or updates
+ * those leaderboard entries with updated counts, totals, averages, best WPM, and timestamps. If the user's profile
+ * is missing, no changes are made.
  *
  * @param userId - UID of the user whose leaderboard entries will be updated
- * @param testData - Test result whose metrics (`wpm`, `accuracy`, etc.) are aggregated into the leaderboards
+ * @param testData - Test result metrics to aggregate (e.g., `wpm`, `accuracy`, `errors`, `timeTaken`, `textLength`, `testId`)
  * @param db - Firestore instance used for reads and batched writes
- * @param context - Logging/telemetry context passed to logger calls
+ * @param context - Logging/telemetry context supplied to logger calls
  */
 async function updateLeaderboardCollections(userId: string, testData: TestResultData, db: Firestore, context: any) {
   const now = new Date();
@@ -202,10 +202,10 @@ async function updateLeaderboardCollections(userId: string, testData: TestResult
 }
 
 /**
- * Handles POST requests to submit a typing test result: validates authorization and payload, saves the result to Firestore, and returns a JSON response with a correlation ID.
+ * Handle POST requests that submit a typing test result by validating authorization and payload, saving the result to Firestore, and returning a JSON response with a correlation ID.
  *
  * @param request - Incoming NextRequest expected to include an Authorization `Bearer` token header and a JSON body matching `TestResultData`
- * @returns A NextResponse with a JSON payload indicating success or an error and including a `correlationId`; responses use HTTP 200 for success, 400 for validation failures, 401 for authorization failures, and 500 for internal errors.
+ * @returns A NextResponse whose JSON payload indicates success or an error and includes a `correlationId`. Uses HTTP 200 for success, 400 for validation failures, 401 for authorization failures, and 500 for internal errors.
  */
 async function handlePOST(request: NextRequest) {
   const { startTime } = createTimingContext();

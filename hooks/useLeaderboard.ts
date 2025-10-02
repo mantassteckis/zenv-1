@@ -29,19 +29,16 @@ interface UseLeaderboardReturn {
 }
 
 /**
- * Fetches and manages leaderboard data for a given limit and timeframe.
- *
- * Fetches leaderboard entries from the /api/leaderboard endpoint, tracks loading and error state,
- * exposes a refetch function, and may populate a fallback leaderboard when the API is unavailable.
+ * Provides leaderboard data and controls for fetching leaderboard entries for a specified limit and timeframe.
  *
  * @param limit - Maximum number of leaderboard entries to retrieve (default: 100)
  * @param timeframe - Time window for leaderboard results (e.g., "all-time", "daily")
- * @returns An object containing:
- *   - `leaderboard`: array of leaderboard entries
- *   - `isLoading`: `true` while a fetch is in progress
- *   - `error`: error message string or `null` if no error
- *   - `refetch`: function to re-fetch the leaderboard
- *   - `dataSource`: optional string identifying the source of the data
+ * @returns An object with:
+ *   - `leaderboard`: current array of leaderboard entries
+ *   - `isLoading`: `true` while a fetch is in progress, `false` otherwise
+ *   - `error`: error message string or `null` when there is no error
+ *   - `refetch`: function to re-run the leaderboard fetch
+ *   - `dataSource`: optional string identifying the source of the returned data
  */
 export function useLeaderboard(limit: number = 100, timeframe: string = 'all-time'): UseLeaderboardReturn {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
