@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 currentUser.uid,
                 currentUser.email,
                 currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-                currentUser.photoURL  // Don't pass undefined
+                currentUser.photoURL || undefined  // Convert null to undefined
               );
               console.log("✅ AuthProvider - Emergency profile created:", newProfile);
               setProfile(newProfile);

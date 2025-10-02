@@ -109,6 +109,7 @@ function generatePlaceholderContent(topic: string, difficulty: string): string {
  */
 export const submitTestResult = onCall({
   cors: [
+    // Local development environments
     "http://localhost:3000",
     "https://localhost:3000",
     "http://127.0.0.1:3000",
@@ -116,7 +117,12 @@ export const submitTestResult = onCall({
     "http://localhost:3001",
     "https://localhost:3001",
     "http://127.0.0.1:3001",
-    "https://127.0.0.1:3001"
+    "https://127.0.0.1:3001",
+    // Production Firebase App Hosting domain
+    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app",
+    // Production Firebase domains (alternative patterns)
+    "https://solotype-23c1f.web.app",
+    "https://solotype-23c1f.firebaseapp.com"
   ]
 }, async (request) => {
   const { startTime } = createTimingContext();
@@ -295,6 +301,7 @@ import { checkRateLimit } from './rate-limiter';
 
 export const generateAiTest = onCall({
   cors: [
+    // Local development environments
     "http://localhost:3000",
     "https://localhost:3000",
     "http://127.0.0.1:3000",
@@ -302,7 +309,12 @@ export const generateAiTest = onCall({
     "http://localhost:3001",
     "https://localhost:3001",
     "http://127.0.0.1:3001",
-    "https://127.0.0.1:3001"
+    "https://127.0.0.1:3001",
+    // Production Firebase App Hosting domain
+    "https://zentype-v0--solotype-23c1f.europe-west4.hosted.app",
+    // Production Firebase domains (alternative patterns)
+    "https://solotype-23c1f.web.app",
+    "https://solotype-23c1f.firebaseapp.com"
   ]
 }, async (request) => {
   // Enhanced debug logging for Cloud Function entry

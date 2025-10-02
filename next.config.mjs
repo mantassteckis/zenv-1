@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true, // Temporarily ignore ESLint during builds to allow deployment
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false, // Enable TypeScript error checking for better code quality
   },
   images: {
-    unoptimized: true,
+    unoptimized: true, // Keep this for Firebase App Hosting compatibility
   },
   webpack: (config, { isServer }) => {
     // Exclude TypeScript definition files from webpack processing

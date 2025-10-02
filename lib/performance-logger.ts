@@ -232,7 +232,9 @@ class PerformanceLogger {
         slowestEndpoints: [],
         errorsByEndpoint: [],
         requestVolumeOverTime: [],
-        responseTimeOverTime: []
+        responseTimeOverTime: [],
+        slowestQueries: [],
+        databaseTimeOverTime: []
       };
     }
   }

@@ -17,5 +17,16 @@
   ],
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "apphosting": {
+    "backendId": "zentype-v0",
+    "rootDir": "/",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "functions"
+    ]
   }
 }

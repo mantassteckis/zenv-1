@@ -77,7 +77,7 @@ export default function SignupPage() {
       
     } catch (error) {
       console.error("💥 Signup error:", error)
-      alert(`Signup failed: ${error.message}`)
+      alert(`Signup failed: ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
       setIsLoading(false)
     }
   }
@@ -98,7 +98,7 @@ export default function SignupPage() {
         user.uid, 
         user.email, 
         user.displayName || user.email?.split('@')[0] || 'user',
-        user.photoURL  // Don't pass undefined
+        user.photoURL || undefined  // Convert null to undefined
       )
       console.log("Google signup - Profile created:", profileData)
       

@@ -370,7 +370,7 @@ export default function TestPage(): JSX.Element | null {
     setTextToType(test.text);
     debugLogger.addToFlow(flowId, 'info', 'Test text content loaded', {
       textLength: test.text.length,
-      textPreview: test.text.substring(0, 100) + '...'
+      textPreview: test.text.substring(0, 100) + "&hellip;"
     });
     
     // Update current test ID (critical for result saving)
@@ -1663,7 +1663,7 @@ export default function TestPage(): JSX.Element | null {
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-foreground mb-4">Test Complete!</h1>
-              <p className="text-muted-foreground">Here's how you performed</p>
+              <p className="text-muted-foreground">Here&apos;s how you performed</p>
             </div>
             <GlassCard className="space-y-8">
               <div className="grid grid-cols-2 gap-6">

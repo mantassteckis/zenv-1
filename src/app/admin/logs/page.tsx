@@ -1,5 +1,5 @@
 import React from 'react';
-import LogSearchDashboard from '@/components/admin/LogSearchDashboard';
+import LogSearchDashboard from '@/src/components/admin/LogSearchDashboard';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

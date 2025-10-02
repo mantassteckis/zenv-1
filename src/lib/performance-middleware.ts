@@ -231,7 +231,7 @@ export function MonitorPerformance(operation: string, collection?: string) {
     const method = descriptor.value;
     
     descriptor.value = async function (...args: any[]) {
-      const correlationId = this.correlationId || generateCorrelationId();
+      const correlationId = (this as any).correlationId || generateCorrelationId();
       const startTime = Date.now();
       
       try {
@@ -305,6 +305,3 @@ export function createPerformanceAwareDbWrapper(db: any, correlationId: string) 
     }
   });
 }
-
-// Export types for use in other files
-export type { PerformanceMiddlewareOptions };

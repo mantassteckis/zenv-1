@@ -259,7 +259,11 @@ export function PerformanceDashboard({ className }: PerformanceDashboardProps) {
       avgDatabaseTime: metrics.reduce((sum, m) => sum + m.databaseTime, 0) / metrics.length,
       avgExternalServiceTime: metrics.reduce((sum, m) => sum + m.externalServiceTime, 0) / metrics.length,
       topSlowEndpoints,
-      errorsByEndpoint
+      errorsByEndpoint,
+      requestVolumeOverTime: [],
+      responseTimeOverTime: [],
+      slowestQueries: [],
+      databaseTimeOverTime: []
     };
   };
 
@@ -446,7 +450,7 @@ export function PerformanceDashboard({ className }: PerformanceDashboardProps) {
                     <p className="text-sm text-muted-foreground">No slow endpoints detected</p>
                   ) : (
                     stats.topSlowEndpoints.map((endpoint, index) => (
-                      <div key={`${endpoint.endpoint}-${endpoint.avgTime}-${endpoint.count || endpoint.requestCount}-${index}`} className="flex items-center justify-between">
+                      <div key={`${endpoint.endpoint}-${endpoint.avgTime}-${endpoint.requestCount}-${index}`} className="flex items-center justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium truncate">{endpoint.endpoint}</p>
                           <p className="text-xs text-muted-foreground">

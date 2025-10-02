@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
-import { collection, addDoc } from 'firebase-admin/firestore';
 import { logger, createApiContext, createTimingContext } from '@/lib/structured-logger';
 import { CORRELATION_ID_HEADER } from '@/lib/correlation-id';
 import { withPerformanceMonitoring } from '@/src/lib/performance-middleware';
@@ -367,12 +366,12 @@ async function handlePOST(request: NextRequest) {
           // Check if it's the same week
           if (existingWeeklyData?.periodStart?.toDate() >= weekStart) {
             // Same week - update stats
-            const weeklyTestsCompleted = (existingWeeklyData.testsCompleted || 0) + 1;
-            const weeklyTotalWpm = ((existingWeeklyData.avgWpm || 0) * (existingWeeklyData.testsCompleted || 0)) + testData.wpm;
+            const weeklyTestsCompleted = (existingWeeklyData?.testsCompleted || 0) + 1;
+            const weeklyTotalWpm = ((existingWeeklyData?.avgWpm || 0) * (existingWeeklyData?.testsCompleted || 0)) + testData.wpm;
             const weeklyNewAvgWpm = Math.round(weeklyTotalWpm / weeklyTestsCompleted);
-            const weeklyTotalAcc = ((existingWeeklyData.avgAcc || 0) * (existingWeeklyData.testsCompleted || 0)) + testData.accuracy;
+            const weeklyTotalAcc = ((existingWeeklyData?.avgAcc || 0) * (existingWeeklyData?.testsCompleted || 0)) + testData.accuracy;
             const weeklyNewAvgAcc = Math.round(weeklyTotalAcc / weeklyTestsCompleted);
-            const weeklyNewBestWpm = Math.max(existingWeeklyData.bestWpm || 0, testData.wpm);
+            const weeklyNewBestWpm = Math.max(existingWeeklyData?.bestWpm || 0, testData.wpm);
             
             weeklyStats = {
               ...weeklyStats,
@@ -427,12 +426,12 @@ async function handlePOST(request: NextRequest) {
           // Check if it's the same month
           if (existingMonthlyData?.periodStart?.toDate() >= monthStart) {
             // Same month - update stats
-            const monthlyTestsCompleted = (existingMonthlyData.testsCompleted || 0) + 1;
-            const monthlyTotalWpm = ((existingMonthlyData.avgWpm || 0) * (existingMonthlyData.testsCompleted || 0)) + testData.wpm;
+            const monthlyTestsCompleted = (existingMonthlyData?.testsCompleted || 0) + 1;
+            const monthlyTotalWpm = ((existingMonthlyData?.avgWpm || 0) * (existingMonthlyData?.testsCompleted || 0)) + testData.wpm;
             const monthlyNewAvgWpm = Math.round(monthlyTotalWpm / monthlyTestsCompleted);
-            const monthlyTotalAcc = ((existingMonthlyData.avgAcc || 0) * (existingMonthlyData.testsCompleted || 0)) + testData.accuracy;
+            const monthlyTotalAcc = ((existingMonthlyData?.avgAcc || 0) * (existingMonthlyData?.testsCompleted || 0)) + testData.accuracy;
             const monthlyNewAvgAcc = Math.round(monthlyTotalAcc / monthlyTestsCompleted);
-            const monthlyNewBestWpm = Math.max(existingMonthlyData.bestWpm || 0, testData.wpm);
+            const monthlyNewBestWpm = Math.max(existingMonthlyData?.bestWpm || 0, testData.wpm);
             
             monthlyStats = {
               ...monthlyStats,

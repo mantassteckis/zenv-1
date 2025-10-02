@@ -23,6 +23,7 @@ export interface LogContext {
   serviceName: string;
   functionName: string;
   userId?: string;
+  correlationId?: string;
   requestMethod?: string;
   requestPath?: string;
   additionalContext?: Record<string, any>;
@@ -41,7 +42,7 @@ export class StructuredLogger {
   private createBaseLogEntry(context: LogContext): Omit<LogEntry, 'executionTimeMs' | 'responseStatusCode' | 'errorDetails'> {
     return {
       timestamp: new Date().toISOString(),
-      correlationId: generateCorrelationId(),
+      correlationId: context.correlationId || generateCorrelationId(),
       serviceName: context.serviceName,
       userId: context.userId,
       functionName: context.functionName,
@@ -130,10 +131,13 @@ export function createTimingContext(): { startTime: number } {
 
 // Helper function for API route logging
 export function createApiContext(req: any, functionName: string, userId?: string): LogContext {
+  const correlationId = req.headers?.get ? req.headers.get('x-correlation-id') : req.headers?.['x-correlation-id'];
+  
   return {
     serviceName: 'nextjs-api',
     functionName,
     userId,
+    correlationId: correlationId || generateCorrelationId(),
     requestMethod: req.method,
     requestPath: req.url || req.nextUrl?.pathname
   };

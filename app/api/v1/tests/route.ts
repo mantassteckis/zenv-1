@@ -18,8 +18,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase with error handling
-let app;
-let db;
+let app: any;
+let db: any;
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -121,6 +121,7 @@ async function handleGET(request: NextRequest) {
         source: data.source || 'Unknown',
         wordCount: data.wordCount || 0,
         timeLimit: data.timeLimit || 60,
+        createdAt: data.createdAt || new Date().toISOString(),
       });
     });
 
@@ -147,7 +148,7 @@ async function handleGET(request: NextRequest) {
     };
 
     const response = NextResponse.json(responseData);
-    response.headers.set(CORRELATION_ID_HEADER, context.correlationId);
+    response.headers.set(CORRELATION_ID_HEADER, context.correlationId || 'unknown');
     
     logger.info(context, 'API Route: v1/tests completed successfully', { 
       testsReturned: tests.length,
@@ -167,11 +168,11 @@ async function handleGET(request: NextRequest) {
       { 
         error: 'Failed to fetch tests',
         message: error instanceof Error ? error.message : 'Unknown error occurred',
-        correlationId: context.correlationId
+        correlationId: context.correlationId || 'unknown'
       },
       { status: 500 }
     );
-    errorResponse.headers.set(CORRELATION_ID_HEADER, context.correlationId);
+    errorResponse.headers.set(CORRELATION_ID_HEADER, context.correlationId || 'unknown');
     return errorResponse;
   }
 }

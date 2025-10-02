@@ -225,6 +225,49 @@ Rate limits are enforced per user ID and reset every hour. When exceeded, endpoi
 
 ---
 
-**Last Updated:** January 2025  
+## CORS Configuration
+
+Firebase Cloud Functions are configured with explicit CORS whitelisting for security:
+
+### **Allowed Origins**
+
+#### **Development Environments**
+- `http://localhost:3000` and `https://localhost:3000`
+- `http://127.0.0.1:3000` and `https://127.0.0.1:3000`
+- `http://localhost:3001` and `https://localhost:3001`
+- `http://127.0.0.1:3001` and `https://127.0.0.1:3001`
+
+#### **Production Environments**
+- `https://zentype-v0--solotype-23c1f.europe-west4.hosted.app` (Firebase App Hosting)
+- `https://solotype-23c1f.web.app` (Firebase Hosting)
+- `https://solotype-23c1f.firebaseapp.com` (Firebase Hosting Alternative)
+
+### **CORS Security Notes**
+- **No wildcard origins** - Only explicitly whitelisted domains are allowed
+- **HTTPS enforced** for all production domains
+- **Preflight requests** (OPTIONS) are automatically handled by Firebase
+- **Cross-origin credentials** are supported for authenticated requests
+
+### **Troubleshooting CORS Issues**
+
+If you encounter CORS errors:
+
+1. **Check the origin:** Ensure your domain is in the whitelist above
+2. **Verify HTTPS:** Production domains must use HTTPS
+3. **Browser console:** Look for specific CORS error messages
+4. **GCP logs:** Check if OPTIONS requests are succeeding but POST requests are blocked
+
+**Common CORS Error:**
+```
+Access to fetch at 'https://us-central1-solotype-23c1f.cloudfunctions.net/generateAiTest' 
+from origin 'https://your-domain.com' has been blocked by CORS policy
+```
+
+**Solution:** Add your domain to the CORS whitelist in `functions/src/index.ts` and redeploy.
+
+---
+
+**Last Updated:** October 2, 2025  
 **API Version:** v1  
-**Status:** Production Ready
+**Status:** Production Ready  
+**Recent Updates:** CORS configuration updated for Firebase App Hosting deployment

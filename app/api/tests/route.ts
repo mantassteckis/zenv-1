@@ -18,8 +18,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase with error handling
-let app;
-let db;
+let app: any;
+let db: any;
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
